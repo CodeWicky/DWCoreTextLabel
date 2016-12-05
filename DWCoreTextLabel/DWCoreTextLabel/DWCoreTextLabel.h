@@ -45,4 +45,11 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
 
 ///垂直对齐方式
 @property (nonatomic ,assign) DWTextVerticalAlignment textVerticalAlignment;
+
+///排除区域
+/**
+ 注：设置排除区域后，对齐方式失效
+ */
+@property (nonatomic ,strong) NSArray<UIBezierPath *> * exclusionPaths;
+
 @end

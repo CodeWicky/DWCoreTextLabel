@@ -9,9 +9,16 @@
 #import "DWCoreTextLabel.h"
 #import <CoreText/CoreText.h>
 
+@interface DWCoreTextLabel ()
+
+@property (nonatomic ,strong) NSMutableArray * exclusionP;
+
+@end
+
 @implementation DWCoreTextLabel
 @synthesize font = _font;
 @synthesize textColor = _textColor;
+@synthesize exclusionPaths = _exclusionPaths;
 
 - (void)drawRect:(CGRect)rect {
     [super drawRect:rect];
@@ -30,36 +37,53 @@
     CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth];
     
     CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
-    if (frame.size.height > suggestSize.height) {///垂直对齐方式处理
-        frame.size = suggestSize;
-        CGPoint origin = frame.origin;
-        if (self.textVerticalAlignment == DWTextVerticalAlignmentCenter) {
-            origin.y = self.bounds.size.height / 2.0 - suggestSize.height / 2.0;
+    if (self.exclusionPaths.count == 0) {///若无排除区域按对齐方式处理
+        if (frame.size.height > suggestSize.height) {///垂直对齐方式处理
+            frame.size = suggestSize;
+            CGPoint origin = frame.origin;
+            if (self.textVerticalAlignment == DWTextVerticalAlignmentCenter) {
+                origin.y = self.bounds.size.height / 2.0 - suggestSize.height / 2.0;
+            }
+            else if (self.textVerticalAlignment == DWTextVerticalAlignmentTop)
+            {
+                origin.y = self.bounds.size.height - suggestSize.height - self.textInsets.top;
+            }
+            frame.origin = origin;
         }
-        else if (self.textVerticalAlignment == DWTextVerticalAlignmentTop)
-        {
-            origin.y = self.bounds.size.height - suggestSize.height - self.textInsets.top;
+        
+        if (frame.size.width < limitWidth) {///水平对齐方式处理
+            CGPoint origin = frame.origin;
+            if (self.textAlignment == NSTextAlignmentCenter) {
+                origin.x = self.bounds.size.width / 2.0 - frame.size.width / 2.0;
+            }
+            else if (self.textAlignment == NSTextAlignmentRight)
+            {
+                origin.x = self.bounds.size.width - frame.size.width - self.textInsets.right;
+            }
+            frame.origin = origin;
         }
-        frame.origin = origin;
     }
     
-    if (frame.size.width < limitWidth) {///水平对齐方式处理
-        CGPoint origin = frame.origin;
-        if (self.textAlignment == NSTextAlignmentCenter) {
-            origin.x = self.bounds.size.width / 2.0 - frame.size.width / 2.0;
-        }
-        else if (self.textAlignment == NSTextAlignmentRight)
-        {
-            origin.x = self.bounds.size.width - frame.size.width - self.textInsets.right;
-        }
-        frame.origin = origin;
+    
+    UIBezierPath * path = [UIBezierPath bezierPathWithRect:frame];
+    [[UIColor greenColor] setFill];
+    [path fill];
+    
+    
+    if (self.exclusionPaths.count) {
+        [self.exclusionP enumerateObjectsUsingBlock:^(UIBezierPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            [self dw_MirrorPath:obj inBounds:frame];
+            [path appendPath:obj];
+        }];
     }
     
-    CGMutablePathRef path = CGPathCreateMutable();//创建绘制区域
-    CGPathAddRect(path, NULL, frame);//添加绘制尺寸
-    CTFrameRef _frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, mAStr.length), path, NULL);//工厂根据绘制区域及富文本（可选范围，多次设置）设置frame
+    [[UIColor orangeColor] setFill];
+    [path fill];
+    
+    CTFrameRef _frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, mAStr.length), path.CGPath, NULL);//工厂根据绘制区域及富文本（可选范围，多次设置）设置frame
+    
+    CFRange range = CTFrameGetVisibleStringRange(_frame);
     CTFrameDraw(_frame, context);//根据frame绘制上下文
-    CFRelease(path);
     CFRelease(frameSetter);
 }
 
@@ -90,24 +114,33 @@
     return suggestSize;
 }
 
-#pragma mark ---method override---
--(void)sizeToFit
+#pragma mark ---tool method---
+
+
+-(void)dw_MirrorPath:(UIBezierPath *)path inBounds:(CGRect)bounds
 {
-    CGRect frame = self.frame;
-    frame.size = [self sizeThatFits:CGSizeMake(self.bounds.size.width, 0)];
-    self.frame = frame;
+    [path applyTransform:CGAffineTransformMakeScale(1, -1)];
+    [path applyTransform:CGAffineTransformMakeTranslation(0, 2 * bounds.origin.y + bounds.size.height)];
 }
 
--(CGSize)sizeThatFits:(CGSize)size
-{
-    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
-    NSMutableAttributedString * mAStr = [self getMAStr];
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);//一个frame的工厂，负责生成frame
-    
-    CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth];
-    
-    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
-}
+#pragma mark ---method override---
+//-(void)sizeToFit
+//{
+//    CGRect frame = self.frame;
+//    frame.size = [self sizeThatFits:CGSizeMake(self.bounds.size.width, 0)];
+//    self.frame = frame;
+//}
+//
+//-(CGSize)sizeThatFits:(CGSize)size
+//{
+//    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
+//    NSMutableAttributedString * mAStr = [self getMAStr];
+//    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);//一个frame的工厂，负责生成frame
+//    
+//    CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth];
+//    
+//    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
+//}
 #pragma mark ---setter、getter---
 -(void)setText:(NSString *)text
 {
@@ -117,14 +150,18 @@
 
 -(void)setTextAlignment:(NSTextAlignment)textAlignment
 {
-    _textAlignment = textAlignment;
-    [self setNeedsDisplay];
+    if (self.exclusionPaths.count == 0) {
+        _textAlignment = textAlignment;
+        [self setNeedsDisplay];
+    }
 }
 
 -(void)setTextVerticalAlignment:(DWTextVerticalAlignment)textVerticalAlignment
 {
-    _textVerticalAlignment = textVerticalAlignment;
-    [self setNeedsDisplay];
+    if (self.exclusionPaths.count == 0) {
+        _textVerticalAlignment = textVerticalAlignment;
+        [self setNeedsDisplay];
+    }
 }
 
 -(UIFont *)font
@@ -167,7 +204,22 @@
     return _textColor;
 }
 
+-(NSArray<UIBezierPath *> *)exclusionPaths
+{
+    if (!_exclusionPaths) {
+        _exclusionPaths = [NSArray array];
+    }
+    return _exclusionPaths;
+}
 
+-(void)setExclusionPaths:(NSMutableArray<UIBezierPath *> *)exclusionPaths
+{
+    _exclusionPaths = exclusionPaths;
+    [self setNeedsDisplay];
+}
 
-
+-(NSMutableArray *)exclusionP
+{
+    return [self.exclusionPaths mutableCopy];
+}
 @end

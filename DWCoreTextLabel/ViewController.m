@@ -20,13 +20,13 @@
     label.backgroundColor = [UIColor redColor];
     label.center = self.view.center;
 //    label.textAlignment = NSTextAlignmentRight;
-//    label.textVerticalAlignment = DWTextVerticalAlignmentTop;
-    label.text = @"我";
-    label.textInsets = UIEdgeInsetsMake(10, 10, 10, 10);
+    label.textVerticalAlignment = DWTextVerticalAlignmentTop;
+    label.text = @"我我我我我我我我我";
+    label.textInsets = UIEdgeInsetsMake(50, 50, 10, 10);
 //    label.attributedText = [[NSAttributedString alloc] initWithString:@"我们"];
     label.textColor = [UIColor yellowColor];
     [self.view addSubview:label];
-
+    label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(10, 10, 60, 60)],[UIBezierPath bezierPathWithOvalInRect:CGRectMake(50, 50, 30, 30)]];
 }
 
 
