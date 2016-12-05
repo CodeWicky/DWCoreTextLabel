@@ -13,6 +13,8 @@
 
 @property (nonatomic ,strong) NSMutableArray * exclusionP;
 
+@property (nonatomic ,strong) NSMutableArray * imageArr;
+
 @end
 
 @implementation DWCoreTextLabel
@@ -72,8 +74,10 @@
     
     if (self.exclusionPaths.count) {
         [self.exclusionP enumerateObjectsUsingBlock:^(UIBezierPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            [self dw_MirrorPath:obj inBounds:frame];
-            [path appendPath:obj];
+            if (CGRectContainsRect(path.bounds, obj.bounds)) {
+                [self dw_MirrorPath:obj inBounds:frame];
+                [path appendPath:obj];
+            }
         }];
     }
     
@@ -83,44 +87,83 @@
     CTFrameRef _frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, mAStr.length), path.CGPath, NULL);//工厂根据绘制区域及富文本（可选范围，多次设置）设置frame
     
     CFRange range = CTFrameGetVisibleStringRange(_frame);
+    if (range.length < mAStr.length) {
+        _frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, range.length), path.CGPath, NULL);
+    }
+    
+    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIImage * image = dic[@"image"];
+        CGRect frame = [self convertRect:[dic[@"frame"] CGRectValue]];
+        CGContextDrawImage(context, frame, image.CGImage);
+    }];
+    
     CTFrameDraw(_frame, context);//根据frame绘制上下文
+    CFRelease(_frame);
     CFRelease(frameSetter);
 }
 
+-(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode
+{
+    switch (mode) {
+        case DWTextImageDrawModeCover:
+        {
+           
+        }
+            break;
+        default:
+        {
+            [self.exclusionPaths addObject:[UIBezierPath bezierPathWithRect:frame]];
+        }
+            break;
+    }
+    [self.imageArr addObject:@{@"image":image,@"frame":[NSValue valueWithCGRect:frame],@"drawMode":@(mode)}];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
+}
+
+
+#pragma mark ---tool method---
+
 -(NSMutableAttributedString *)getMAStr
 {
-    ///解决水平对齐方式
-    NSMutableParagraphStyle   *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
-    [paragraphStyle setLineSpacing:5.5];//行间距
-    paragraphStyle.alignment = self.textAlignment;
     
-    NSRange totalRange = NSMakeRange(0, self.text.length);
+    
     NSMutableAttributedString * mAStr = [[NSMutableAttributedString alloc] initWithAttributedString:self.attributedText];
     if (!self.attributedText) {
+        ///解决水平对齐方式
+        NSMutableParagraphStyle   *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+        [paragraphStyle setLineSpacing:5.5];//行间距
+        paragraphStyle.alignment = self.exclusionPaths.count == 0?self.textAlignment:NSTextAlignmentLeft;
+        NSRange totalRange = NSMakeRange(0, self.text.length);
         NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:self.text];
         [attributeStr addAttribute:NSFontAttributeName value:self.font range:totalRange];
         [attributeStr addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:totalRange];
         [attributeStr addAttribute:(NSString *)NSForegroundColorAttributeName value:self.textColor range:totalRange];
+        
         mAStr = attributeStr;
+        
     }
     return mAStr;
 }
 
+-(void)dw_MirrorPath:(UIBezierPath *)path inBounds:(CGRect)bounds
+{
+    [path applyTransform:CGAffineTransformMakeScale(1, -1)];
+    [path applyTransform:CGAffineTransformMakeTranslation(0, 2 * bounds.origin.y + bounds.size.height)];
+}
+
 -(CGSize)getSuggestSizeWithFrameSetter:(CTFramesetterRef)frameSetter
-                      limitWidth:(CGFloat)limitWidth
+                            limitWidth:(CGFloat)limitWidth
 {
     CGSize restrictSize = CGSizeMake(limitWidth, CGFLOAT_MAX);//创建预估计尺寸
     CGSize suggestSize = CTFramesetterSuggestFrameSizeWithConstraints(frameSetter, CFRangeMake(0, 0), nil, restrictSize, nil);//根据工厂生成建议尺寸。宽度不变，高度自适应
     return suggestSize;
 }
 
-#pragma mark ---tool method---
-
-
--(void)dw_MirrorPath:(UIBezierPath *)path inBounds:(CGRect)bounds
+-(CGRect)convertRect:(CGRect)rect
 {
-    [path applyTransform:CGAffineTransformMakeScale(1, -1)];
-    [path applyTransform:CGAffineTransformMakeTranslation(0, 2 * bounds.origin.y + bounds.size.height)];
+    return CGRectMake(rect.origin.x, self.bounds.size.height - rect.origin.y - rect.size.height, rect.size.width, rect.size.height);
 }
 
 #pragma mark ---method override---
@@ -145,14 +188,18 @@
 -(void)setText:(NSString *)text
 {
     _text = text;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(void)setTextAlignment:(NSTextAlignment)textAlignment
 {
     if (self.exclusionPaths.count == 0) {
         _textAlignment = textAlignment;
-        [self setNeedsDisplay];
+        if (self.autoRedraw) {
+            [self setNeedsDisplay];
+        }
     }
 }
 
@@ -160,7 +207,9 @@
 {
     if (self.exclusionPaths.count == 0) {
         _textVerticalAlignment = textVerticalAlignment;
-        [self setNeedsDisplay];
+        if (self.autoRedraw) {
+            [self setNeedsDisplay];
+        }
     }
 }
 
@@ -175,25 +224,33 @@
 -(void)setFont:(UIFont *)font
 {
     _font = font;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(void)setTextInsets:(UIEdgeInsets)textInsets
 {
     _textInsets = textInsets;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(void)setAttributedText:(NSAttributedString *)attributedText
 {
     _attributedText = attributedText;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(void)setTextColor:(UIColor *)textColor
 {
     _textColor = textColor;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(UIColor *)textColor
@@ -204,10 +261,10 @@
     return _textColor;
 }
 
--(NSArray<UIBezierPath *> *)exclusionPaths
+-(NSMutableArray<UIBezierPath *> *)exclusionPaths
 {
     if (!_exclusionPaths) {
-        _exclusionPaths = [NSArray array];
+        _exclusionPaths = [NSMutableArray array];
     }
     return _exclusionPaths;
 }
@@ -215,11 +272,21 @@
 -(void)setExclusionPaths:(NSMutableArray<UIBezierPath *> *)exclusionPaths
 {
     _exclusionPaths = exclusionPaths;
-    [self setNeedsDisplay];
+    if (self.autoRedraw) {
+        [self setNeedsDisplay];
+    }
 }
 
 -(NSMutableArray *)exclusionP
 {
-    return [self.exclusionPaths mutableCopy];
+    return [self.exclusionPaths copy];
+}
+
+-(NSMutableArray *)imageArr
+{
+    if (!_imageArr) {
+        _imageArr = [NSMutableArray array];
+    }
+    return _imageArr;
 }
 @end

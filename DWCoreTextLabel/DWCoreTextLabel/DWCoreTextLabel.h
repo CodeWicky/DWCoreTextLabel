@@ -13,6 +13,12 @@
  version 1.0.0
  实现基本文本展示相关属性
  重写sizeToFit、sizeThatFits:方法
+ 
+ version 1.0.1
+ 移除sizeToFit、sizeThatFits:方法
+ 添加排除区域组
+ 添加自动重绘标签
+ 添加绘制图片api
  */
 
 #import <UIKit/UIKit.h>
@@ -21,6 +27,11 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
     DWTextVerticalAlignmentCenter,
     DWTextVerticalAlignmentTop,
     DWTextVerticalAlignmentBottom
+};
+
+typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
+    DWTextImageDrawModeSurround,
+    DWTextImageDrawModeCover
 };
 
 @interface DWCoreTextLabel : UIView
@@ -46,10 +57,21 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
 ///垂直对齐方式
 @property (nonatomic ,assign) DWTextVerticalAlignment textVerticalAlignment;
 
-///排除区域
+
+
+///排除区域组
 /**
  注：设置排除区域后，对齐方式失效
+ 排除区域位于文本区域外部，排除区域失效
  */
-@property (nonatomic ,strong) NSArray<UIBezierPath *> * exclusionPaths;
+@property (nonatomic ,strong) NSMutableArray<UIBezierPath *> * exclusionPaths;
+
+///自动重绘
+/**
+ 默认关闭，开启后设置需要重绘的属性后自动重绘
+ */
+@property (nonatomic ,assign) BOOL autoRedraw;
+
+-(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode;
 
 @end
