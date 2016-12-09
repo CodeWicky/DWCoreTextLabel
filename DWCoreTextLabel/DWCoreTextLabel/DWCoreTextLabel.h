@@ -31,7 +31,8 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
 
 typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
     DWTextImageDrawModeSurround,
-    DWTextImageDrawModeCover
+    DWTextImageDrawModeCover,
+    DWTextImageDrawModeInsert
 };
 
 @interface DWCoreTextLabel : UIView
@@ -45,6 +46,12 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
 ///文本颜色
 @property (nonatomic ,strong) UIColor * textColor;
 
+///行数
+@property (nonatomic ,assign) NSUInteger numberOflines;
+
+///断行模式
+@property (nonatomic ,assign) NSLineBreakMode lineBreakMode;
+
 ///字体
 @property (nonatomic ,strong) UIFont * font;
 
@@ -57,7 +64,8 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
 ///垂直对齐方式
 @property (nonatomic ,assign) DWTextVerticalAlignment textVerticalAlignment;
 
-
+///行间距
+@property (nonatomic ,assign) CGFloat lineSpacing;
 
 ///排除区域组
 /**
