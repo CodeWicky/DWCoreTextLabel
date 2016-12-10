@@ -19,6 +19,15 @@
  添加排除区域组
  添加自动重绘标签
  添加绘制图片api
+ 
+ version 1.0.2
+ 实现行数限制
+ 实现尾部省略号折行
+ 
+ version 1.0.3
+ 实现插入图片模式
+ 
+ 
  */
 
 #import <UIKit/UIKit.h>
@@ -31,8 +40,7 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
 
 typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
     DWTextImageDrawModeSurround,
-    DWTextImageDrawModeCover,
-    DWTextImageDrawModeInsert
+    DWTextImageDrawModeCover
 };
 
 @interface DWCoreTextLabel : UIView
@@ -69,8 +77,10 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
 
 ///排除区域组
 /**
- 注：设置排除区域后，对齐方式失效
+ 注：
+ 设置排除区域后，对齐方式失效
  排除区域位于文本区域外部，排除区域失效
+ 排除区域重叠部分奇数重合区域则为不排除
  */
 @property (nonatomic ,strong) NSMutableArray<UIBezierPath *> * exclusionPaths;
 
@@ -80,6 +90,19 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
  */
 @property (nonatomic ,assign) BOOL autoRedraw;
 
+/**
+ 绘制图片
+ 
+ 注：surround模式下，frame应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
+ 若图片有重合区域，请以coverMode绘制并自行添加排除区域
+ */
 -(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode;
+
+/**
+ 插入图片
+ 
+ 注：在指定位置插入图片，图片大小会影响行间距
+ */
+-(void)insertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent;
 
 @end
