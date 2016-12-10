@@ -31,7 +31,7 @@
     label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(10, 10, 100, 100)],[UIBezierPath bezierPathWithOvalInRect:CGRectMake(100, 350, 200, 100)]].mutableCopy;
     [label drawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 100, 100) drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(click)];
     [label insertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(50, 50) atLocation:200 descent:-50 target:nil selector:nil];
-    [label addTarget:self selector:@selector(click) toRange:NSMakeRange(200, 1)];
+    [label addTarget:self selector:@selector(click) toRange:NSMakeRange(200, 50)];
     NSDictionary * dic = @{NSForegroundColorAttributeName:[UIColor redColor]};
     label.activeTextAttributes = dic;
 //    [label drawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 100, 100) drawMode:(DWTextImageDrawModeSurround)];

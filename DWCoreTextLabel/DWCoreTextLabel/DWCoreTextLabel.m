@@ -11,14 +11,16 @@
 static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @interface DWCoreTextLabel ()
 
-@property (nonatomic ,strong) NSMutableArray * exclusionP;
-
+///绘制图片数组
 @property (nonatomic ,strong) NSMutableArray * imageArr;
 
+///活跃文本数组
 @property (nonatomic ,strong) NSMutableArray * textArr;
 
+///绘制surround图片是排除区域数组
 @property (nonatomic ,strong) NSMutableArray * imageExclusion;
 
+///绘制插入图片是保存插入位置的数组
 @property (nonatomic ,strong) NSMutableArray * arrLocationImgHasAdd;
 
 @end
@@ -216,7 +218,16 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:point run:run];
         if (!CGRectEqualToRect(deleteBounds, CGRectNull)) {
             deleteBounds = [self convertRect:deleteBounds];
-            dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
+            NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
+            if (!dic[@"frame"]) {
+                dic[@"frame"] = boundsValue;
+            }
+            else
+            {
+                NSMutableDictionary * newDic = [NSMutableDictionary dictionaryWithDictionary:dic];
+                newDic[@"frame"] = boundsValue;
+                [self.textArr addObject:newDic];
+            }
         }
     }];
 }
@@ -554,7 +565,7 @@ static CGFloat widthCallBacks(void * ref)
     
     ///排除区域处理
     if (self.exclusionPaths.count) {
-        [self handleDrawPath:path frame:frame exclusionArray:self.exclusionP];
+        [self handleDrawPath:path frame:frame exclusionArray:self.exclusionPaths];
     }
     
     ///图片环绕区域处理
@@ -701,11 +712,6 @@ static CGFloat widthCallBacks(void * ref)
 {
     _exclusionPaths = exclusionPaths;
     [self handleAutoRedraw];
-}
-
--(NSMutableArray *)exclusionP
-{
-    return [self.exclusionPaths copy];
 }
 
 -(NSMutableArray *)imageArr

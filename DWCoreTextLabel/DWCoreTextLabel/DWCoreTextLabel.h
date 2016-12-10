@@ -30,17 +30,20 @@
  version 1.0.4
  添加图片点击事件及文字点击事件
  添加活跃文本样式
+ 
+ version 1.0.5
+ 修复文本点击换行失效问题
  */
 
 #import <UIKit/UIKit.h>
 
-typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {
+typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {///纵向对齐方式
     DWTextVerticalAlignmentCenter,
     DWTextVerticalAlignmentTop,
     DWTextVerticalAlignmentBottom
 };
 
-typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
+typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
     DWTextImageDrawModeSurround,
     DWTextImageDrawModeCover
 };
