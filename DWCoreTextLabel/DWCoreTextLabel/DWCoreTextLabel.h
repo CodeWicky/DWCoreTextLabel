@@ -27,7 +27,9 @@
  version 1.0.3
  实现插入图片模式
  
- 
+ version 1.0.4
+ 添加图片点击事件及文字点击事件
+ 添加活跃文本样式
  */
 
 #import <UIKit/UIKit.h>
@@ -91,18 +93,28 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {
 @property (nonatomic ,assign) BOOL autoRedraw;
 
 /**
+ 活跃文本的属性
+ */
+@property (nonatomic ,strong) NSDictionary * activeTextAttributes;
+
+/**
  绘制图片
  
  注：surround模式下，frame应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
  若图片有重合区域，请以coverMode绘制并自行添加排除区域
  */
--(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode;
+-(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
  
  注：在指定位置插入图片，图片大小会影响行间距
  */
--(void)insertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent;
+-(void)insertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent target:(id)target selector:(SEL)selector;
+
+/**
+ 为指定区域文本添加点击事件
+ */
+-(void)addTarget:(id)target selector:(SEL)selector toRange:(NSRange)range;
 
 @end
