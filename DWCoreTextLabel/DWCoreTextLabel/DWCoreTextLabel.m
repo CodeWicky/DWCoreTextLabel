@@ -26,6 +26,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///绘制插入图片是保存插入位置的数组
 @property (nonatomic ,strong) NSMutableArray * arrLocationImgHasAdd;
 
+///点击状态
+@property (nonatomic ,assign) BOOL textClicked;
+
+///保存可变排除区域的数组
+@property (nonatomic ,strong) NSMutableArray * exclusionP;
+
+///具有响应事件
+@property (nonatomic ,assign) BOOL hasActionToDo;
+
 @end
 
 @implementation DWCoreTextLabel
@@ -200,8 +209,14 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self.textRangeArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
         NSRange range = [dic[@"range"] rangeValue];
         [str addAttribute:@"clickAttribute" value:dic range:range];
-        if (self.activeTextAttributes) {
-            [str addAttributes:self.activeTextAttributes range:range];
+        if (self.textClicked) {
+            [str addAttributes:self.activeTextHighlightAttributes range:range];
+        }
+        else
+        {
+            if (self.activeTextAttributes) {
+                [str addAttributes:self.activeTextAttributes range:range];
+            }
         }
     }];
 }
@@ -453,22 +468,58 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
 {
     CGPoint point = [[touches anyObject] locationInView:self];
-    NSMutableDictionary * dic = [self getImageDicWithPoint:point];
-    if (dic) {
-        [self handleClickWithDic:dic];
-        return;
-    }
-    dic = [self getActiveTextDicWithPoint:point];
-    if (dic) {
-        [self handleClickWithDic:dic];
+    
+    [self handleHasActionStatusWithPoint:point];
+    
+    if ([self getActiveTextDicWithPoint:point]) {
+        [self handleHighlightClick];
         return;
     }
     [super touchesBegan:touches withEvent:event];
 }
 
+-(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    if (self.hasActionToDo) {
+        CGPoint point = [[touches anyObject] locationInView:self];
+        [self handleHasActionStatusWithPoint:point];
+        if (!self.hasActionToDo) {
+            if (self.textClicked) {
+                self.textClicked = NO;
+                [self setNeedsDisplay];
+            }
+        }
+        return;
+    }
+    [super touchesMoved:touches withEvent:event];
+}
+
+-(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    if (self.hasActionToDo) {
+        CGPoint point = [[touches anyObject] locationInView:self];
+        NSMutableDictionary * dic = [self getImageDicWithPoint:point];
+        if (dic) {
+            [self handleClickWithDic:dic];
+            return;
+        }
+        dic = [self getActiveTextDicWithPoint:point];
+        if (dic) {
+            if (self.textClicked) {
+                self.textClicked = NO;
+                [self setNeedsDisplay];
+            }
+            [self handleClickWithDic:dic];
+            return;
+        }
+    }
+    [super touchesEnded:touches withEvent:event];
+}
+
 ///处理点击事件
 -(void)handleClickWithDic:(NSDictionary *)dic
 {
+    self.hasActionToDo = NO;
     id target = dic[@"target"];
     SEL selector = NSSelectorFromString(dic[@"SEL"]);
     NSMethodSignature  *signature = [[target class] instanceMethodSignatureForSelector:selector];
@@ -476,6 +527,21 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     invocation.target = target;
     invocation.selector = selector;
     [invocation invoke];
+}
+
+///处理点击高亮
+-(void)handleHighlightClick
+{
+    if (self.activeTextHighlightAttributes) {
+        self.textClicked = YES;
+        [self setNeedsDisplay];
+    }
+}
+
+///处理具有响应事件状态
+-(void)handleHasActionStatusWithPoint:(CGPoint)point
+{
+    self.hasActionToDo = ([self getImageDicWithPoint:point] || [self getActiveTextDicWithPoint:point]);
 }
 
 #pragma mark ---CTRUN代理---
@@ -563,7 +629,7 @@ static CGFloat widthCallBacks(void * ref)
     
     ///排除区域处理
     if (self.exclusionPaths.count) {
-        [self handleDrawPath:path frame:frame exclusionArray:self.exclusionPaths];
+        [self handleDrawPath:path frame:frame exclusionArray:self.exclusionP];
     }
     
     ///图片环绕区域处理
@@ -750,5 +816,10 @@ static CGFloat widthCallBacks(void * ref)
         _activeTextArr = [NSMutableArray array];
     }
     return _activeTextArr;
+}
+
+-(NSMutableArray *)exclusionP
+{
+    return [[NSMutableArray alloc] initWithArray:self.exclusionPaths copyItems:YES];
 }
 @end

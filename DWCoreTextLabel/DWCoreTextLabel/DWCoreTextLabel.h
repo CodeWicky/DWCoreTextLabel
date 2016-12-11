@@ -36,6 +36,9 @@
  
  version 1.0.6
  优化文本计算逻辑
+ 
+ version 1.0.7
+ 添加高亮状态、完善高亮逻辑、恢复exclusionP以修复排除区域点击状态下bug
  */
 
 #import <UIKit/UIKit.h>
@@ -102,6 +105,11 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
  活跃文本的属性
  */
 @property (nonatomic ,strong) NSDictionary * activeTextAttributes;
+
+/**
+ 活跃文本的高亮属性
+ */
+@property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
 
 /**
  绘制图片

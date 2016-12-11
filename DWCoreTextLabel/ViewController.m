@@ -34,6 +34,8 @@
     [label addTarget:self selector:@selector(click) toRange:NSMakeRange(200, 50)];
     NSDictionary * dic = @{NSForegroundColorAttributeName:[UIColor redColor]};
     label.activeTextAttributes = dic;
+    NSDictionary * dic2 = @{NSForegroundColorAttributeName:[UIColor greenColor]};
+    label.activeTextHighlightAttributes = dic2;
 //    [label drawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 100, 100) drawMode:(DWTextImageDrawModeSurround)];
 }
 
