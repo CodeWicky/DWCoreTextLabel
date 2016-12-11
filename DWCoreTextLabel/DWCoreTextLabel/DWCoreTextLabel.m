@@ -15,7 +15,10 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @property (nonatomic ,strong) NSMutableArray * imageArr;
 
 ///活跃文本数组
-@property (nonatomic ,strong) NSMutableArray * textArr;
+@property (nonatomic ,strong) NSMutableArray * activeTextArr;
+
+///活跃文本数组
+@property (nonatomic ,strong) NSMutableArray * textRangeArr;
 
 ///绘制surround图片是排除区域数组
 @property (nonatomic ,strong) NSMutableArray * imageExclusion;
@@ -74,7 +77,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 {
     if (target && selector && range.length > 0) {
         NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"target":target,@"SEL":NSStringFromSelector(selector),@"range":[NSValue valueWithRange:range]}];
-        [self.textArr addObject:dic];
+        [self.textRangeArr addObject:dic];
         [self handleAutoRedraw];
     }
 }
@@ -194,7 +197,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///添加点击事件方法
 -(void)handleActiveTextWithStr:(NSMutableAttributedString *)str
 {
-    [self.textArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
+    [self.textRangeArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
         NSRange range = [dic[@"range"] rangeValue];
         [str addAttribute:@"clickAttribute" value:dic range:range];
         if (self.activeTextAttributes) {
@@ -206,6 +209,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///将所有活动文本的frame补全
 -(void)handleActiveTextFrameWithCTFrame:(CTFrameRef)frame
 {
+    [self.activeTextArr removeAllObjects];
     [self enumerateCTRunInFrame:frame handler:^(NSArray *arrLines, CGPoint *points, int currentLineNum, NSArray *arrRuns, int currentRunNum, BOOL *stop) {
         CTRunRef run = (__bridge CTRunRef)arrRuns[currentRunNum];
         NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);
@@ -219,15 +223,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         if (!CGRectEqualToRect(deleteBounds, CGRectNull)) {
             deleteBounds = [self convertRect:deleteBounds];
             NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
-            if (!dic[@"frame"]) {
-                dic[@"frame"] = boundsValue;
-            }
-            else
-            {
-                NSMutableDictionary * newDic = [NSMutableDictionary dictionaryWithDictionary:dic];
-                newDic[@"frame"] = boundsValue;
-                [self.textArr addObject:newDic];
-            }
+            NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
+            dicWithFrame[@"frame"] = boundsValue;
+            [self.activeTextArr addObject:dicWithFrame];
         }
     }];
 }
@@ -411,7 +409,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///获取活动文字中包含点的字典
 -(NSMutableDictionary *)getActiveTextDicWithPoint:(CGPoint)point
 {
-    return [self getDicWithPoint:point fromArray:self.textArr];
+    return [self getDicWithPoint:point fromArray:self.activeTextArr];
 }
 
 ///从指定数组中获取包含点的字典
@@ -738,11 +736,19 @@ static CGFloat widthCallBacks(void * ref)
     return _arrLocationImgHasAdd;
 }
 
--(NSMutableArray *)textArr
+-(NSMutableArray *)textRangeArr
 {
-    if (!_textArr) {
-        _textArr = [NSMutableArray array];
+    if (!_textRangeArr) {
+        _textRangeArr = [NSMutableArray array];
     }
-    return _textArr;
+    return _textRangeArr;
+}
+
+-(NSMutableArray *)activeTextArr
+{
+    if (!_activeTextArr) {
+        _activeTextArr = [NSMutableArray array];
+    }
+    return _activeTextArr;
 }
 @end

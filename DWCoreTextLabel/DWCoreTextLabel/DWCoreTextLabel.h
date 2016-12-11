@@ -33,6 +33,9 @@
  
  version 1.0.5
  修复文本点击换行失效问题
+ 
+ version 1.0.6
+ 优化文本计算逻辑
  */
 
 #import <UIKit/UIKit.h>
