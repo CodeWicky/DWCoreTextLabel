@@ -61,7 +61,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 #pragma mark ---接口方法---
 
 ///在字符串指定位置插入图片
--(void)insertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent target:(id)target selector:(SEL)selector
+-(void)dw_InsertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent target:(id)target selector:(SEL)selector
 {
     NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
     if (target && selector) {
@@ -73,9 +73,29 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///以指定模式绘制图片
--(void)drawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+-(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
 {
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"frame":[NSValue valueWithCGRect:frame],@"drawMode":@(mode)}];
+    if (CGRectEqualToRect(frame, CGRectZero)) {
+        return;
+    }
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"path":[UIBezierPath bezierPathWithRect:frame],@"frame":[NSValue valueWithCGRect:frame],@"drawMode":@(mode)}];
+    if (target && selector) {
+        [dic setValue:target forKey:@"target"];
+        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    [self.imageArr addObject:dic];
+    [self handleAutoRedrawWithRecalculate:YES];
+}
+
+-(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+{
+    if (!path) {
+        return;
+    }
+    UIBezierPath * newPath = [path copy];
+    [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
+    image = [DWCoreTextLabel dw_ClipImage:image withPath:newPath mode:(DWImageClipModeScaleAspectFill)];
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"path":path,@"frame":[NSValue valueWithCGRect:path.bounds],@"drawMode":@(mode)}];
     if (target && selector) {
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
@@ -85,7 +105,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///给指定范围添加响应事件
--(void)addTarget:(id)target selector:(SEL)selector toRange:(NSRange)range
+-(void)dw_AddTarget:(id)target selector:(SEL)selector toRange:(NSRange)range
 {
     if (target && selector && range.length > 0) {
         NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"target":target,@"SEL":NSStringFromSelector(selector),@"range":[NSValue valueWithRange:range]}];
@@ -94,56 +114,51 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }
 }
 
-//+(UIImage *)handleImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWContentMode)mode
-//{
-////    CGFloat originScale = image.size.width / image.size.height;
-//    CGRect boxBounds = path.bounds;
-////    CGFloat height = width / originScale;
-//    CGFloat scale = [UIScreen mainScreen].scale;
-////    CGFloat maxV = MAX(width, height);
-////    if (radius < 0) {
-////        radius = 0;
-////    }
-//    CGRect imageFrame = boxBounds;
-////    if (mode == DWContentModeScaleAspectFit) {//根据图片填充模式制定绘制frame
-////        if (originScale > 1) {//适应模式
-////            imageFrame = CGRectMake(0, (width - height) / 2, width,height);
-////        }
-////        else
-////        {
-////            imageFrame = CGRectMake((height - width) / 2, 0, width, height);
-////        }
-////    }
-////    else if (mode == DWContentModeScaleAspectFill)//填充模式
-////    {
-////        CGFloat newHeight;
-////        CGFloat newWidth;
-////        if (originScale > 1) {
-////            newHeight = width;
-////            newWidth = newHeight * originScale;
-////            imageFrame = CGRectMake( -(newWidth - newHeight) / 2, 0, newWidth, newHeight);
-////        }
-////        else
-////        {
-////            newWidth = height;
-////            newHeight = newWidth / originScale;
-////            imageFrame = CGRectMake(0, - (newHeight - newWidth) / 2, newWidth, newHeight);
-////        }
-////    }
-////    else//拉伸模式
-////    {
-////        imageFrame = CGRectMake(0, 0, maxV, maxV);
-////    }
-//    ///开启上下文
-//    UIGraphicsBeginImageContextWithOptions(boxBounds.size, NO, scale);//以最大长度开启图片上下文
-//    CGContextRef context = UIGraphicsGetCurrentContext();
-//    [path addClip];//绘制一个圆形的贝塞尔曲线，并做遮罩
-//    [image drawInRect:imageFrame];//在指定的frame中绘制图片
-//    CGContextRotateCTM(context, M_PI_2);
-//    UIImage * newImage = UIGraphicsGetImageFromCurrentImageContext();//从当前上下文中获取图片
-//    UIGraphicsEndImageContext();//关闭上下文
-//    return newImage;
-//}
++(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode
+{
+    CGFloat originScale = image.size.width * 1.0 / image.size.height;
+    CGRect boxBounds = path.bounds;
+    CGFloat width = boxBounds.size.width;
+    CGFloat height = width / originScale;
+    switch (mode) {
+        case DWImageClipModeScaleAspectFit:
+        {
+            if (height > boxBounds.size.height) {
+                height = boxBounds.size.height;
+                width = height * originScale;
+            }
+        }
+            break;
+        case DWImageClipModeScaleAspectFill:
+        {
+            if (height < boxBounds.size.height) {
+                height = boxBounds.size.height;
+                width = height * originScale;
+            }
+        }
+            break;
+        default:
+            if (height != boxBounds.size.height) {
+                height = boxBounds.size.height;
+            }
+            break;
+    }
+    
+    ///开启上下文
+    UIGraphicsBeginImageContextWithOptions(boxBounds.size, NO, [UIScreen mainScreen].scale);
+    CGContextRef bitmap = UIGraphicsGetCurrentContext();
+    [path addClip];
+    ///移动原点至图片中心
+    CGContextTranslateCTM(bitmap, boxBounds.size.width/2.0, boxBounds.size.height/2.0);
+    CGContextScaleCTM(bitmap, 1.0, -1.0);
+    CGContextDrawImage(bitmap, CGRectMake(-width / 2, -height / 2, width, height), image.CGImage);
+    
+    ///生成图片
+    UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return newImage;
+}
 
 #pragma mark ---插入图片相关---
 
@@ -341,9 +356,11 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self.imageExclusion removeAllObjects];
     [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeSurround) {
-            CGRect imgFrame = [dic[@"frame"] CGRectValue];
-            CGRect newFrame = CGRectIntersection(frame,imgFrame);
-            [self.imageExclusion addObject:[UIBezierPath bezierPathWithRect:newFrame]];
+//            CGRect imgFrame = [dic[@"frame"] CGRectValue];
+//            CGRect newFrame = CGRectIntersection(frame,imgFrame);
+//            [self.imageExclusion addObject:[UIBezierPath bezierPathWithRect:newFrame]];
+            UIBezierPath * newPath = [dic[@"path"] copy];
+            [self.imageExclusion addObject:newPath];
         }
     }];
 }
@@ -499,21 +516,24 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///获取活动图片中包含点的字典
 -(NSMutableDictionary *)getImageDicWithPoint:(CGPoint)point
 {
-    return [self getDicWithPoint:point fromArray:self.imageArr];
+    __block NSMutableDictionary * dicClicked = nil;
+    [self.imageArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIBezierPath * path = dic[@"path"];
+        if ([path containsPoint:point]) {
+            if (dic[@"target"] && dic[@"SEL"]) {
+                dicClicked = dic;
+            }
+            *stop = YES;
+        }
+    }];
+    return dicClicked;
 }
 
 ///获取活动文字中包含点的字典
 -(NSMutableDictionary *)getActiveTextDicWithPoint:(CGPoint)point
 {
-    return [self getDicWithPoint:point fromArray:self.activeTextArr];
-}
-
-///从指定数组中获取包含点的字典
--(NSMutableDictionary *)getDicWithPoint:(CGPoint)point
-                              fromArray:(NSMutableArray *)arr
-{
     __block NSMutableDictionary * dicClicked = nil;
-    [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+    [self.activeTextArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         CGRect frame = [dic[@"frame"] CGRectValue];
         if (CGRectContainsPoint(frame, point)) {
             if (dic[@"target"] && dic[@"SEL"]) {

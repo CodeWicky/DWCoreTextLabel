@@ -31,14 +31,15 @@
     label.textColor = [UIColor blueColor];
     [self.view addSubview:label];
     label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(10, 10, 100, 100)],[UIBezierPath bezierPathWithOvalInRect:CGRectMake(100, 350, 200, 100)]].mutableCopy;
-    [label drawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 50, 100) drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(click)];
-    [label insertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(20, 20) atLocation:400 descent:0 target:nil selector:nil];
-    [label addTarget:self selector:@selector(click) toRange:NSMakeRange(200, 50)];
+//    [label dw_DrawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 50, 100) drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(click)];
+    [label dw_InsertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(20, 20) atLocation:400 descent:0 target:nil selector:nil];
+    [label dw_AddTarget:self selector:@selector(click) toRange:NSMakeRange(200, 50)];
+    [label dw_DrawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 100, 100) drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(click)];
     NSDictionary * dic = @{NSForegroundColorAttributeName:[UIColor redColor]};
     label.activeTextAttributes = dic;
     NSDictionary * dic2 = @{NSForegroundColorAttributeName:[UIColor greenColor]};
     label.activeTextHighlightAttributes = dic2;
-    [label addTarget:self selector:@selector(second) toRange:NSMakeRange(125, 50)];
+    [label dw_AddTarget:self selector:@selector(second) toRange:NSMakeRange(125, 50)];
     self.label = label;
 //    [label drawImage:[UIImage imageNamed:@"2.jpg"] atFrame:CGRectMake(100, 100, 100, 100) drawMode:(DWTextImageDrawModeSurround)];
 }
