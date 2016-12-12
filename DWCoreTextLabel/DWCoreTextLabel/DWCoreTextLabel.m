@@ -356,9 +356,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self.imageExclusion removeAllObjects];
     [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeSurround) {
-//            CGRect imgFrame = [dic[@"frame"] CGRectValue];
-//            CGRect newFrame = CGRectIntersection(frame,imgFrame);
-//            [self.imageExclusion addObject:[UIBezierPath bezierPathWithRect:newFrame]];
             UIBezierPath * newPath = [dic[@"path"] copy];
             [self.imageExclusion addObject:newPath];
         }
