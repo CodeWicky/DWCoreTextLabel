@@ -39,6 +39,14 @@
  
  version 1.0.7
  添加高亮状态、完善高亮逻辑、恢复exclusionP以修复排除区域点击状态下bug
+ 
+ version 1.0.8
+ 修复多链接响应排序、高亮等问题
+ 
+ version 1.0.9
+ 优化重绘算法
+ 
+ 
  */
 
 #import <UIKit/UIKit.h>
@@ -48,6 +56,14 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {///纵向对齐方式
     DWTextVerticalAlignmentTop,
     DWTextVerticalAlignmentBottom
 };
+
+typedef NS_ENUM(NSInteger,DWContentMode)//图片填充模式
+{
+    DWContentModeScaleAspectFit,//适应模式
+    DWContentModeScaleAspectFill,//填充模式
+    DWContentModeScaleToFill//拉伸模式
+};
+
 
 typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
     DWTextImageDrawModeSurround,
@@ -131,4 +147,8 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
  */
 -(void)addTarget:(id)target selector:(SEL)selector toRange:(NSRange)range;
 
+/**
+// 返回指定形状的image对象
+// */
+//+(UIImage *)handleImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWContentMode)mode;
 @end
