@@ -39,7 +39,7 @@
     label.activeTextHighlightAttributes = dic2;
     [label dw_AddTarget:self selector:@selector(second) toRange:NSMakeRange(125, 50)];
     self.label = label;
-//    [self.label sizeToFit];
+    [self.label sizeToFit];
 }
 
 
