@@ -50,6 +50,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///绘制范围
 @property (nonatomic ,strong) UIBezierPath * drawPath;
 
+///适应尺寸
+@property (nonatomic ,assign) CGSize suggestSize;
+
 @end
 
 @implementation DWCoreTextLabel
@@ -221,38 +224,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 #pragma mark ---文本相关---
-///获取当前需要绘制的文本
--(NSMutableAttributedString *)getMAStrWithLimitWidth:(CGFloat)limitWidth
-{
-    NSMutableAttributedString * mAStr = [[NSMutableAttributedString alloc] initWithAttributedString:self.attributedText];
-    NSUInteger length = self.attributedText?self.attributedText.length:self.text.length;
-    NSMutableParagraphStyle * paragraphStyle = [[NSMutableParagraphStyle alloc] init];
-    NSRange totalRange = NSMakeRange(0, length);
-    if (!self.attributedText) {
-        [paragraphStyle setLineBreakMode:self.lineBreakMode];
-        [paragraphStyle setLineSpacing:self.lineSpacing];
-        paragraphStyle.alignment = (self.exclusionPaths.count == 0)?self.textAlignment:NSTextAlignmentLeft;
-        NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:self.text];
-        [attributeStr addAttribute:NSFontAttributeName value:self.font range:totalRange];
-        [attributeStr addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:totalRange];
-        [attributeStr addAttribute:NSForegroundColorAttributeName value:self.textColor range:totalRange];
-        mAStr = attributeStr;
-    }
-    else
-    {
-        [paragraphStyle setLineBreakMode:self.lineBreakMode];
-        paragraphStyle.alignment = (self.exclusionPaths.count == 0)?self.textAlignment:NSTextAlignmentLeft;
-        [mAStr addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:totalRange];
-    }
-    
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
-    CFRange range = [self getLastLineRangeWithFrameSetter:frameSetter limitWidth:limitWidth];
-    NSMutableParagraphStyle * newPara = [paragraphStyle mutableCopy];
-    newPara.lineBreakMode = NSLineBreakByTruncatingTail;
-    [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
-    CFRelease(frameSetter);
-    return mAStr;
-}
 
 ///处理对齐方式
 -(void)handleAlignmentWithFrame:(CGRect)frame
@@ -382,13 +353,47 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 {
     [array enumerateObjectsUsingBlock:^(UIBezierPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         if (CGRectContainsRect(path.bounds, obj.bounds)) {
-            [self dw_MirrorPath:obj inBounds:frame];
+            [self convertPath:obj inBounds:frame];
             [path appendPath:obj];
         }
     }];
 }
 
 #pragma mark ---获取相关数据方法---
+
+///获取当前需要绘制的文本
+-(NSMutableAttributedString *)getMAStrWithLimitWidth:(CGFloat)limitWidth
+{
+    NSMutableAttributedString * mAStr = [[NSMutableAttributedString alloc] initWithAttributedString:self.attributedText];
+    NSUInteger length = self.attributedText?self.attributedText.length:self.text.length;
+    NSMutableParagraphStyle * paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+    NSRange totalRange = NSMakeRange(0, length);
+    if (!self.attributedText) {
+        [paragraphStyle setLineBreakMode:self.lineBreakMode];
+        [paragraphStyle setLineSpacing:self.lineSpacing];
+        paragraphStyle.alignment = (self.exclusionPaths.count == 0)?self.textAlignment:NSTextAlignmentLeft;
+        NSMutableAttributedString * attributeStr = [[NSMutableAttributedString alloc] initWithString:self.text];
+        [attributeStr addAttribute:NSFontAttributeName value:self.font range:totalRange];
+        [attributeStr addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:totalRange];
+        [attributeStr addAttribute:NSForegroundColorAttributeName value:self.textColor range:totalRange];
+        mAStr = attributeStr;
+    }
+    else
+    {
+        [paragraphStyle setLineBreakMode:self.lineBreakMode];
+        paragraphStyle.alignment = (self.exclusionPaths.count == 0)?self.textAlignment:NSTextAlignmentLeft;
+        [mAStr addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:totalRange];
+    }
+    
+    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
+    CFRange range = [self getLastLineRangeWithFrameSetter:frameSetter limitWidth:limitWidth];
+    NSMutableParagraphStyle * newPara = [paragraphStyle mutableCopy];
+    newPara.lineBreakMode = NSLineBreakByTruncatingTail;
+    [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
+    CFRelease(frameSetter);
+    return mAStr;
+}
+
 ///获取插入图片偏移量
 -(NSInteger)getInsertOffsetWithLocation:(NSInteger)location
 {
@@ -575,7 +580,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 #pragma mark ---镜像转换方法---
 ///获取镜像path
--(void)dw_MirrorPath:(UIBezierPath *)path inBounds:(CGRect)bounds
+-(void)convertPath:(UIBezierPath *)path inBounds:(CGRect)bounds
 {
     [path applyTransform:CGAffineTransformMakeScale(1, -1)];
     [path applyTransform:CGAffineTransformMakeTranslation(0, 2 * bounds.origin.y + bounds.size.height)];
@@ -676,7 +681,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     self.hasActionToDo = ([self getImageDicWithPoint:point] || [self getActiveTextDicWithPoint:point]);
 }
 
-#pragma mark ---CTRUN代理---
+#pragma mark ---CTRun 代理---
 static CGFloat ascentCallBacks(void * ref)
 {
     NSDictionary * dic = (__bridge NSDictionary *)ref;
@@ -745,14 +750,13 @@ static CGFloat widthCallBacks(void * ref)
         [self handleStr:self.mAStr withInsertImageArr:arrInsert];
     }
     
-    
     ///添加工厂
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
     
     if (self.reCalculate) {
         ///生成绘制尺寸
         CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth strToDraw:self.mAStr];
-        
+        self.suggestSize = CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
         CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
         
         ///处理图片排除区域
@@ -815,23 +819,35 @@ static CGFloat widthCallBacks(void * ref)
     CFRelease(frameSetter);
 }
 
-//-(void)sizeToFit
-//{
-//    CGRect frame = self.frame;
-//    frame.size = [self sizeThatFits:CGSizeMake(self.bounds.size.width, 0)];
-//    self.frame = frame;
-//}
-//
-//-(CGSize)sizeThatFits:(CGSize)size
-//{
-//    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
-//    NSMutableAttributedString * mAStr = [self getMAStr];
-//    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);//一个frame的工厂，负责生成frame
-//
-//    CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth];
-//
-//    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
-//}
+-(void)sizeToFit
+{
+    CGRect frame = self.frame;
+    frame.size = [self sizeThatFits:CGSizeMake(self.bounds.size.width, 0)];
+    self.frame = frame;
+}
+
+-(CGSize)sizeThatFits:(CGSize)size
+{
+    if (!CGSizeEqualToSize(self.suggestSize, CGSizeZero)) {
+        return self.suggestSize;
+    }
+    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (size.width - self.textInsets.left - self.textInsets.right) : 0;
+    
+    NSMutableAttributedString * mAStr = [self getMAStrWithLimitWidth:limitWidth];
+    
+    NSMutableArray * arrInsert = [NSMutableArray array];
+    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+        if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
+            [arrInsert addObject:dic];
+        }
+    }];
+    [self handleStr:mAStr withInsertImageArr:arrInsert];
+    
+    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
+    CGSize suggestSize = [self getSuggestSizeWithFrameSetter:frameSetter limitWidth:limitWidth strToDraw:self.mAStr];
+    CFRelease(frameSetter);
+    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
+}
 
 #pragma mark ---setter、getter---
 -(void)setText:(NSString *)text
@@ -991,6 +1007,12 @@ static CGFloat widthCallBacks(void * ref)
 {
     _activeTextHighlightAttributes = activeTextHighlightAttributes;
     [self handleAutoRedrawWithRecalculate:NO];
+}
+
+-(void)setFrame:(CGRect)frame
+{
+    [super setFrame:frame];
+    [self handleAutoRedrawWithRecalculate:YES];
 }
 
 @end

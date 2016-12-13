@@ -56,6 +56,9 @@
  
  version 1.0.12
  调整代码，解决内存泄漏
+ 
+ version 1.0.13
+ 重写sizeToFit、sizeThatFits:方法
  */
 
 #import <UIKit/UIKit.h>
