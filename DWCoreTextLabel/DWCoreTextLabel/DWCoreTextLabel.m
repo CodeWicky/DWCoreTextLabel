@@ -61,9 +61,12 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 #pragma mark ---接口方法---
 
 ///在字符串指定位置插入图片
--(void)dw_InsertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent target:(id)target selector:(SEL)selector
+-(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector
 {
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
+    if (padding != 0) {
+        size = CGSizeMake(size.width + padding * 2, size.height);
+    }
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"padding":@(padding),@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
     if (target && selector) {
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
@@ -73,12 +76,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///以指定模式绘制图片
--(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+-(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
 {
     if (CGRectEqualToRect(frame, CGRectZero)) {
         return;
     }
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"path":[UIBezierPath bezierPathWithRect:frame],@"frame":[NSValue valueWithCGRect:frame],@"drawMode":@(mode)}];
+    CGRect drawFrame = CGRectInset(frame, margin, margin);
+    UIBezierPath * drawPath = [UIBezierPath bezierPathWithRect:frame];
+    UIBezierPath * activePath = [self getImageAcitvePathWithDrawPath:drawPath margin:margin];
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":drawPath,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:drawFrame],@"margin":@(margin),@"drawMode":@(mode)}];
     if (target && selector) {
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
@@ -87,7 +93,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleAutoRedrawWithRecalculate:YES];
 }
 
--(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+-(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
 {
     if (!path) {
         return;
@@ -95,7 +101,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     UIBezierPath * newPath = [path copy];
     [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
     image = [DWCoreTextLabel dw_ClipImage:image withPath:newPath mode:(DWImageClipModeScaleAspectFill)];
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"path":path,@"frame":[NSValue valueWithCGRect:path.bounds],@"drawMode":@(mode)}];
+    UIBezierPath * activePath = [self getImageAcitvePathWithDrawPath:path margin:margin];
+    
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":path,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:CGRectInset(path.bounds, margin, margin)],@"drawMode":@(mode)}];
     if (target && selector) {
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
@@ -199,9 +207,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         UIImage * image = dic[@"image"];
         CGRect rect = [self getRectWithImage:image CTFrame:frame];
-        if (!CGRectEqualToRect(rect, CGRectNull)) {
-            rect = [self convertRect:rect];
+        rect = [self convertRect:rect];
+        dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:rect];
+        CGFloat padding = [dic[@"padding"] floatValue];
+        if (padding != 0) {
+            rect = CGRectInset(rect, padding, 0);
+        }
+        if (!CGRectEqualToRect(rect, CGRectZero)) {
             dic[@"frame"] = [NSValue valueWithCGRect:rect];
+            dic[@"activePath"] = [UIBezierPath bezierPathWithRect:rect];
         }
     }];
 }
@@ -236,6 +250,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     NSMutableParagraphStyle * newPara = [paragraphStyle mutableCopy];
     newPara.lineBreakMode = NSLineBreakByTruncatingTail;
     [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
+    CFRelease(frameSetter);
     return mAStr;
 }
 
@@ -356,7 +371,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self.imageExclusion removeAllObjects];
     [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeSurround) {
-            UIBezierPath * newPath = [dic[@"path"] copy];
+            UIBezierPath * newPath = [dic[@"drawPath"] copy];
             [self.imageExclusion addObject:newPath];
         }
     }];
@@ -444,6 +459,22 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return range;
 }
 
+///获取按照margin缩放的frame
+-(UIBezierPath *)getImageAcitvePathWithDrawPath:(UIBezierPath *)path margin:(CGFloat)margin
+{
+    UIBezierPath * newPath = [path copy];
+    if (margin == 0) {
+        return newPath;
+    }
+    CGFloat widthScale = 1 - margin * 2 / newPath.bounds.size.width;
+    CGFloat heightScale = 1 - margin * 2 / newPath.bounds.size.height;
+    CGFloat offsetX = newPath.bounds.origin.x * (1 - widthScale) + margin;
+    CGFloat offsetY = newPath.bounds.origin.y * (1 -heightScale) + margin;
+    [newPath applyTransform:CGAffineTransformMakeScale(widthScale, heightScale)];
+    [newPath applyTransform:CGAffineTransformMakeTranslation(offsetX, offsetY)];
+    return newPath;
+}
+
 ///获取对应图片的绘制frame
 -(CGRect)getRectWithImage:(UIImage *)image
                     CTFrame:(CTFrameRef)frame
@@ -515,7 +546,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 {
     __block NSMutableDictionary * dicClicked = nil;
     [self.imageArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        UIBezierPath * path = dic[@"path"];
+        UIBezierPath * path = dic[@"activePath"];
         if ([path containsPoint:point]) {
             if (dic[@"target"] && dic[@"SEL"]) {
                 dicClicked = dic;
@@ -756,6 +787,7 @@ static CGFloat widthCallBacks(void * ref)
     
     ///获取可显示绘制区域
     if (range.length < self.mAStr.length) {
+        CFRelease(_frame);
         _frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, range.length), self.drawPath.CGPath, NULL);
     }
     

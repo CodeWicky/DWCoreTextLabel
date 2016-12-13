@@ -49,6 +49,13 @@
  version 1.0.10
  优化绘制图片算法，添加以路径绘制图片，优化图片判断点击算法，以路径判断
  添加按路径生成图片接口
+ 
+ version 1.0.11
+ 绘制图片时添加margin预留参数，调整图片绘制时与文字的内距
+ 插入图片时添加padding预留参数，调整图片绘制时与两侧文字的外距
+ 
+ version 1.0.12
+ 调整代码，解决内存泄漏
  */
 
 #import <UIKit/UIKit.h>
@@ -59,7 +66,7 @@ typedef NS_ENUM(NSUInteger, DWTextVerticalAlignment) {///纵向对齐方式
     DWTextVerticalAlignmentBottom
 };
 
-typedef NS_ENUM(NSInteger,DWImageClipMode)//图片填充模式
+typedef NS_ENUM(NSInteger,DWImageClipMode)//图片剪裁模式
 {
     DWImageClipModeScaleAspectFit,//适应模式
     DWImageClipModeScaleAspectFill,//填充模式
@@ -130,27 +137,54 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
 @property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
 
 /**
- 绘制图片
+ 以frame绘制矩形图片
+ 
+ image      将要绘制的图片
+ frame      绘制图片的尺寸
+ margin     绘制图片时的内距效果，margin大于0时，绘制的实际尺寸小于frame，同时保证绘制中心不变
+ drawMode   图片绘制模式，包括环绕型和覆盖型
+ target     可选参数，与target配套使用
+ selector   为图片添加点击事件，响应区域为图片实际绘制区域
  
  注：surround模式下，frame应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
  若图片有重合区域，请以coverMode绘制并自行添加排除区域
  */
--(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
- 绘制图片
+ 以path绘制不规则形状图片
  
- 注：surround模式下，path应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
+ image      将要绘制的图片
+ path       绘制图片的路径，先以path对图片进行剪裁，后绘制
+ margin     绘制图片时的内距效果，margin大于0时，绘制的实际路径小于path，同时保证绘制中心不变
+ drawMode   图片绘制模式，包括环绕型和覆盖型
+ target     可选参数，与target配套使用
+ selector   为图片添加点击事件，响应区域为图片实际绘制区域
+ 
+ 注：
+ 1.surround模式下，path应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
  若图片有重合区域，请以coverMode绘制并自行添加排除区域
+ 2.将自动按照path路径形状剪裁图片，图片无需事先处理
+ 3.自动剪裁图片时按照path的形状剪裁，与origin无关。
  */
--(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
  
- 注：在指定位置插入图片，图片大小会影响行间距
+ image      将要绘制的图片
+ size       绘制图片的大小
+ padding    绘制图片时的外距效果，padding大于0时，绘制的图片距两端文字有padding的距离
+ descent    绘制图片的底部基线与文字基线的偏移量，当descent等于0时，与文字的底部基线对其
+ location   要插入图片的位置
+ target     可选参数，与target配套使用
+ selector   为图片添加点击事件，响应区域为图片实际绘制区域
+ 
+ 注：
+ 1.在指定位置插入图片，图片大小会影响行间距
+ 2.插入图片的位置不影响为范围内文字添加点击事件，无需另做考虑
  */
--(void)dw_InsertImage:(UIImage *)image size:(CGSize)size atLocation:(NSUInteger)location descent:(CGFloat)descent target:(id)target selector:(SEL)selector;
+-(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
 /**
  为指定区域文本添加点击事件
