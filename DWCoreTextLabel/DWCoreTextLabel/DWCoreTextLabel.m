@@ -158,7 +158,14 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     ///开启上下文
     UIGraphicsBeginImageContextWithOptions(boxBounds.size, NO, [UIScreen mainScreen].scale);
     CGContextRef bitmap = UIGraphicsGetCurrentContext();
-    [path addClip];
+    
+    ///切图
+    UIBezierPath * newPath = [path copy];
+    if (!(newPath.bounds.origin.x * newPath.bounds.origin.y)) {
+        [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
+    }
+    [newPath addClip];
+    
     ///移动原点至图片中心
     CGContextTranslateCTM(bitmap, boxBounds.size.width/2.0, boxBounds.size.height/2.0);
     CGContextScaleCTM(bitmap, 1.0, -1.0);
