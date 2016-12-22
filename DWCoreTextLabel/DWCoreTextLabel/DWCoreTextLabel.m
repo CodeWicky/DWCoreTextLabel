@@ -20,7 +20,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///活跃文本数组
 @property (nonatomic ,strong) NSMutableArray * activeTextArr;
 
-///活跃文本数组
+///活跃文本范围数组
 @property (nonatomic ,strong) NSMutableArray * textRangeArr;
 
 ///绘制surround图片是排除区域数组
@@ -96,6 +96,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleAutoRedrawWithRecalculate:YES];
 }
 
+///以路径绘制图片
 -(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
 {
     if (!path) {
@@ -125,6 +126,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }
 }
 
+///返回指定路径的图片
 +(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode
 {
     CGFloat originScale = image.size.width * 1.0 / image.size.height;
@@ -181,7 +183,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 #pragma mark ---插入图片相关---
 
 ///将图片设置代理后插入富文本
--(void)insertPicWithDictionary:(NSMutableDictionary *)dic
+-(void)handleInsertPicWithDictionary:(NSMutableDictionary *)dic
                          toStr:(NSMutableAttributedString *)str
 {
     NSInteger location = [dic[@"location"] integerValue];
@@ -206,27 +208,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 {
     [self.arrLocationImgHasAdd removeAllObjects];
     [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        [self insertPicWithDictionary:dic toStr:str];
-    }];
-}
-
-///将所有插入图片的字典中的frame补全
--(void)handleInsertImageFrameWithArr:(NSMutableArray *)arr
-                             CTFrame:(CTFrameRef)frame
-{
-    [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        UIImage * image = dic[@"image"];
-        CGRect rect = [self getRectWithImage:image CTFrame:frame];
-        rect = [self convertRect:rect];
-        dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:rect];
-        CGFloat padding = [dic[@"padding"] floatValue];
-        if (padding != 0) {
-            rect = CGRectInset(rect, padding, 0);
-        }
-        if (!CGRectEqualToRect(rect, CGRectZero)) {
-            dic[@"frame"] = [NSValue valueWithCGRect:rect];
-            dic[@"activePath"] = [UIBezierPath bezierPathWithRect:rect];
-        }
+        [self handleInsertPicWithDictionary:dic toStr:str];
     }];
 }
 
@@ -309,30 +291,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return newRange;
 }
 
-///将所有活动文本的frame补全
--(void)handleActiveTextFrameWithCTFrame:(CTFrameRef)frame
-{
-    [self.activeTextArr removeAllObjects];
-    [self enumerateCTRunInFrame:frame handler:^(NSArray *arrLines, CGPoint *points, int currentLineNum, NSArray *arrRuns, int currentRunNum, BOOL *stop) {
-        CTRunRef run = (__bridge CTRunRef)arrRuns[currentRunNum];
-        NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);
-        NSMutableDictionary * dic = attributes[@"clickAttribute"];
-        if (!dic) {
-            return ;
-        }
-        CGPoint point = points[currentLineNum];
-        CTLineRef line = (__bridge CTLineRef)arrLines[currentLineNum];
-        CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:point run:run];
-        if (!CGRectEqualToRect(deleteBounds, CGRectNull)) {
-            deleteBounds = [self convertRect:deleteBounds];
-            NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
-            NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
-            dicWithFrame[@"frame"] = boundsValue;
-            [self.activeTextArr addObject:dicWithFrame];
-        }
-    }];
-}
-
 #pragma mark ---绘制相关---
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
@@ -362,6 +320,55 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         if (CGRectContainsRect(path.bounds, obj.bounds)) {
             [self convertPath:obj inBounds:frame];
             [path appendPath:obj];
+        }
+    }];
+}
+
+///将所有插入图片和活跃文本字典中的frame补全，重绘前调用
+-(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame
+{
+    [self.activeTextArr removeAllObjects];
+    [self enumerateCTRunInFrame:frame handler:^(NSArray *arrLines, CGPoint *points, int currentLineNum, NSArray *arrRuns, int currentRunNum,BOOL * stop) {
+        CTRunRef run = (__bridge CTRunRef)arrRuns[currentRunNum];
+        
+        CGPoint point = points[currentLineNum];
+        CTLineRef line = (__bridge CTLineRef)arrLines[currentLineNum];
+        CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:point run:run];
+        if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
+            return ;
+        }
+        deleteBounds = [self convertRect:deleteBounds];
+        
+        NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);
+        CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
+        
+        if (delegate == nil) {///检测图片，不是图片检测文字
+            NSMutableDictionary * dic = attributes[@"clickAttribute"];
+            if (!dic) {///不是活动文字跳过
+                return ;
+            }
+            NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
+            NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
+            dicWithFrame[@"frame"] = boundsValue;
+            [self.activeTextArr addObject:dicWithFrame];
+            return;
+        }
+        NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
+        if (![dic isKindOfClass:[NSMutableDictionary class]]) {
+            return;
+        }
+        UIImage * image = dic[@"image"];
+        if (!image) {///检测图片，不是图片跳过
+            return;
+        }
+        dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
+        CGFloat padding = [dic[@"padding"] floatValue];
+        if (padding != 0) {
+            deleteBounds = CGRectInset(deleteBounds, padding, 0);
+        }
+        if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
+            dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
+            dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
         }
     }];
 }
@@ -746,8 +753,8 @@ static CGFloat widthCallBacks(void * ref)
     [self handleActiveTextWithStr:self.mAStr withImage:!self.reCalculate];
     
     ///处理插入图片
-    NSMutableArray * arrInsert = [NSMutableArray array];
     if (self.reCalculate) {
+        NSMutableArray * arrInsert = [NSMutableArray array];
         [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
             if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
                 [arrInsert addObject:dic];
@@ -773,9 +780,7 @@ static CGFloat widthCallBacks(void * ref)
         [self handleAlignmentWithFrame:frame suggestSize:suggestSize limitWidth:limitWidth];
         
         self.drawFrame = frame;
-    }
-    
-    if (self.reCalculate) {
+        
         ///创建绘制区域
         UIBezierPath * path = [UIBezierPath bezierPathWithRect:self.drawFrame];
         ///排除区域处理
@@ -803,10 +808,8 @@ static CGFloat widthCallBacks(void * ref)
     }
     
     if (self.reCalculate) {
-        ///计算可点击文本frame
-        [self handleActiveTextFrameWithCTFrame:_frame];
-        ///计算插入图片的frame
-        [self handleInsertImageFrameWithArr:arrInsert CTFrame:_frame];
+        ///计算活跃文本及插入图片的frame
+        [self handleFrameForActiveTextAndInsertImageWithCTFrame:_frame];
     }
 
     ///绘制图片
