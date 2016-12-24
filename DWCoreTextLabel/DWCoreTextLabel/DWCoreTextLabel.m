@@ -437,7 +437,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
                              strToDraw:(NSMutableAttributedString *)str
 {
     CGSize restrictSize = CGSizeMake(limitWidth, MAXFLOAT);
-    if (self.numberOflines == 1) {
+    if (self.numberOfLines == 1) {
         restrictSize = CGSizeMake(MAXFLOAT, MAXFLOAT);
     }
     CFRange rangeToDraw = [self getRangeToDrawWithFrameSetter:frameSetter limitWidth:limitWidth strToDraw:str];
@@ -463,13 +463,13 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
                                limitWidth:(CGFloat)limitWidth
 {
     CFRange range = CFRangeMake(0, 0);
-    if (self.numberOflines > 0) {
+    if (self.numberOfLines > 0) {
         CGMutablePathRef path = CGPathCreateMutable();
         CGPathAddRect(path, NULL, CGRectMake(0.0f, 0.0f, limitWidth, MAXFLOAT));
         CTFrameRef frame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0, 0), path, NULL);
         CFArrayRef lines = CTFrameGetLines(frame);
         if (CFArrayGetCount(lines) > 0) {
-            NSUInteger lineNum = MIN(self.numberOflines, CFArrayGetCount(lines));
+            NSUInteger lineNum = MIN(self.numberOfLines, CFArrayGetCount(lines));
             CTLineRef line = CFArrayGetValueAtIndex(lines, lineNum - 1);
             range = CTLineGetStringRange(line);
         }
@@ -971,9 +971,9 @@ static CGFloat widthCallBacks(void * ref)
     return [[NSMutableArray alloc] initWithArray:self.exclusionPaths copyItems:YES];
 }
 
--(void)setNumberOflines:(NSUInteger)numberOflines
+-(void)setNumberOfLines:(NSUInteger)numberOfLines
 {
-    _numberOflines = numberOflines;
+    _numberOfLines = numberOfLines;
     [self handleAutoRedrawWithRecalculate:YES];
 }
 

@@ -97,7 +97,7 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
 @property (nonatomic ,strong) UIColor * textColor;
 
 ///行数
-@property (nonatomic ,assign) NSUInteger numberOflines;
+@property (nonatomic ,assign) NSUInteger numberOfLines;
 
 ///断行模式
 @property (nonatomic ,assign) NSLineBreakMode lineBreakMode;
@@ -132,14 +132,10 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
  */
 @property (nonatomic ,assign) BOOL autoRedraw;
 
-/**
- 活跃文本的属性
- */
+///活跃文本的属性
 @property (nonatomic ,strong) NSDictionary * activeTextAttributes;
 
-/**
- 活跃文本的高亮属性
- */
+///活跃文本的高亮属性
 @property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
 
 /**
