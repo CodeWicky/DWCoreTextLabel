@@ -59,6 +59,9 @@
  
  version 1.0.13
  重写sizeToFit、sizeThatFits:方法
+ 
+ version 1.0.14
+ 解决初次绘制问题
  */
 
 #import <UIKit/UIKit.h>

@@ -53,6 +53,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///适应尺寸
 @property (nonatomic ,assign) CGSize suggestSize;
 
+///首次绘制
+@property (nonatomic ,assign) BOOL finishFirstDraw;
+
 @end
 
 @implementation DWCoreTextLabel
@@ -295,7 +298,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
 {
-    self.reCalculate = reCalculate;
+    if (self.finishFirstDraw) {
+        self.reCalculate = reCalculate;
+    }
     if (self.autoRedraw) {
         [self setNeedsDisplay];
     }
@@ -328,12 +333,8 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame
 {
     [self.activeTextArr removeAllObjects];
-    [self enumerateCTRunInFrame:frame handler:^(NSArray *arrLines, CGPoint *points, int currentLineNum, NSArray *arrRuns, int currentRunNum,BOOL * stop) {
-        CTRunRef run = (__bridge CTRunRef)arrRuns[currentRunNum];
-        
-        CGPoint point = points[currentLineNum];
-        CTLineRef line = (__bridge CTLineRef)arrLines[currentLineNum];
-        CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:point run:run];
+    [self enumerateCTRunInFrame:frame handler:^(CTLineRef line, CTRunRef run,CGPoint origin,BOOL * stop) {
+        CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:origin run:run];
         if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
             return ;
         }
@@ -494,33 +495,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return newPath;
 }
 
-///获取对应图片的绘制frame
--(CGRect)getRectWithImage:(UIImage *)image
-                    CTFrame:(CTFrameRef)frame
-{
-    __block CGRect deleteBounds = CGRectNull;
-    [self enumerateCTRunInFrame:frame handler:^(NSArray *arrLines, CGPoint *points, int currentLineNum, NSArray *arrRuns, int currentRunNum,BOOL * stop) {
-        CTRunRef run = (__bridge CTRunRef)arrRuns[currentRunNum];
-        NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);
-        CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
-        if (delegate == nil) {
-            return ;
-        }
-        NSDictionary * dic = CTRunDelegateGetRefCon(delegate);
-        if (![dic isKindOfClass:[NSDictionary class]]) {
-            return;
-        }
-        if (![dic[@"image"] isEqual:image]) {
-            return;
-        }
-        CGPoint point = points[currentLineNum];
-        CTLineRef line = (__bridge CTLineRef)arrLines[currentLineNum];
-        deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:point run:run];
-        *stop = YES;
-    }];
-    return deleteBounds;
-}
-
 ///获取CTRun的frame
 -(CGRect)getCTRunBoundsWithFrame:(CTFrameRef)frame
                             line:(CTLineRef)line
@@ -542,17 +516,18 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 ///遍历CTRun
 -(void)enumerateCTRunInFrame:(CTFrameRef)frame
-                     handler:(void(^)(NSArray * arrLines,CGPoint points[],int currentLineNum,NSArray * arrRuns,int currentRunNum,BOOL * stop))handler{
+                     handler:(void(^)(CTLineRef line,CTRunRef run,CGPoint origin,BOOL * stop))handler{
     NSArray * arrLines = (NSArray *)CTFrameGetLines(frame);
     NSInteger count = [arrLines count];
     CGPoint points[count];
     CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), points);
+    BOOL stop = NO;
     for (int i = 0; i < count; i ++) {
         CTLineRef line = (__bridge CTLineRef)arrLines[i];
         NSArray * arrRuns = (NSArray *)CTLineGetGlyphRuns(line);
         for (int j = 0; j < arrRuns.count; j ++) {
-            BOOL stop = NO;
-            handler(arrLines,points,i,arrRuns,j,&stop);
+            CTRunRef run = (__bridge CTRunRef)arrRuns[j];
+            handler(line,run,points[i],&stop);
             if (stop) {
                 break;
             }
@@ -682,9 +657,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///处理点击高亮
 -(void)handleHighlightClickWithDic:(NSMutableDictionary *)dic
 {
+    self.highlightDic = dic;
     if (self.activeTextHighlightAttributes) {
         self.textClicked = YES;
-        self.highlightDic = dic;
         [self setNeedsDisplay];
     }
 }
@@ -820,13 +795,14 @@ static CGFloat widthCallBacks(void * ref)
     }];
     
     self.reCalculate = NO;
-    
+    self.finishFirstDraw = YES;
     ///绘制上下文
     CTFrameDraw(_frame, context);
     
     ///内存管理
     CFRelease(_frame);
     CFRelease(frameSetter);
+    
 }
 
 -(void)sizeToFit
