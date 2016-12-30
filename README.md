@@ -11,6 +11,11 @@
 
 尽可能保持系统Label属性让你可以无缝过渡使用~
 
+如果你想学习一些CoreText的相关知识，你可以来老司机的博客
+
+[老司机的简书](http://www.jianshu.com/p/6db3289fb05d)
+
+开源初期，需要您的支持，喜欢的话麻烦star一下。
 
 
 This is an SDK based on CoreText to help you ...Eh,my English is poor and hope you watch the picture and translate it yourself...
