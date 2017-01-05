@@ -62,6 +62,11 @@
  
  version 1.0.14
  解决初次绘制问题
+ 
+ version 1.0.15
+ 添加自动检测链接属性
+ 添加代理，提供自动链接点击代理
+ 初步完成电话号码自动检测
  */
 
 #import <UIKit/UIKit.h>
@@ -79,13 +84,29 @@ typedef NS_ENUM(NSInteger,DWImageClipMode)//图片剪裁模式
     DWImageClipModeScaleToFill//拉伸模式
 };
 
-
 typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
     DWTextImageDrawModeSurround,
     DWTextImageDrawModeCover
 };
 
+typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
+    DWLinkTypePhoneNo,
+};
+
+@class DWCoreTextLabel;
+@protocol DWCoreTextLabelDelegate <NSObject>
+
+@optional
+
+///自动链接回调
+-(void)coreTextLabel:(DWCoreTextLabel *)label didSelectLink:(NSString *)link range:(NSRange)range linkType:(DWLinkType)linkType;
+
+@end
+
 @interface DWCoreTextLabel : UIView
+
+///代理
+@property (nonatomic ,weak) id<DWCoreTextLabelDelegate> delegate;
 
 ///普通文本
 @property (nonatomic ,strong) NSString * text;
@@ -137,6 +158,35 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
 
 ///活跃文本的高亮属性
 @property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
+
+/**
+ 自动检测特殊链接
+ 
+ 注：
+ 1.包括手机号码
+ 2.默认关闭
+ 
+ */
+@property (nonatomic ,assign) BOOL autoCheckLink;
+
+/**
+ 自动检测的配置字典
+ 
+ 用于定制检测规则
+ */
+@property (nonatomic ,strong) NSMutableDictionary * autoCheckConfig;
+
+///以下属性在autoCheckLink为真时有效
+/**
+ 电话号码属性
+ */
+@property (nonatomic ,strong) NSDictionary * phoneNoAttributes;
+
+/**
+ 电话号码高亮时属性
+ */
+@property (nonatomic ,strong) NSDictionary * phoneNoHighlightAttributes;
+
 
 /**
  以frame绘制矩形图片

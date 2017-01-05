@@ -20,6 +20,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///活跃文本数组
 @property (nonatomic ,strong) NSMutableArray * activeTextArr;
 
+///自动链接数组
+@property (nonatomic ,strong) NSMutableArray * autoLinkArr;
+
 ///活跃文本范围数组
 @property (nonatomic ,strong) NSMutableArray * textRangeArr;
 
@@ -31,6 +34,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 ///点击状态
 @property (nonatomic ,assign) BOOL textClicked;
+
+///自动链接点击状态
+@property (nonatomic ,assign) BOOL linkClicked;
 
 ///保存可变排除区域的数组
 @property (nonatomic ,strong) NSMutableArray * exclusionP;
@@ -63,6 +69,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @synthesize textColor = _textColor;
 @synthesize exclusionPaths = _exclusionPaths;
 @synthesize lineSpacing = _lineSpacing;
+@synthesize phoneNoAttributes = _phoneNoAttributes;
+@synthesize phoneNoHighlightAttributes = _phoneNoHighlightAttributes;
+@synthesize autoCheckConfig = _autoCheckConfig;
 
 #pragma mark ---接口方法---
 
@@ -250,7 +259,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }
 }
 
-///添加点击事件方法
+///添加活跃文本属性方法
 -(void)handleActiveTextWithStr:(NSMutableAttributedString *)str withImage:(BOOL)withImage
 {
     [self.textRangeArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
@@ -294,6 +303,61 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return newRange;
 }
 
+#pragma mark ---自动检测链接相关---
+///自动检测链接方法
+-(void)handleAutoCheckLinkWithStr:(NSMutableAttributedString *)str
+{
+    [self handleAutoCheckWithLinkType:DWLinkTypePhoneNo str:str];
+}
+
+///根据类型处理自动链接
+-(void)handleAutoCheckWithLinkType:(DWLinkType)linkType str:(NSMutableAttributedString *)str
+{
+    NSString * pattern = @"";
+    NSDictionary * tempAttributesDic = nil;
+    NSDictionary * tempHighLightAttributesDic = nil;
+    switch (linkType) {
+        case DWLinkTypePhoneNo:
+        {
+            pattern = self.autoCheckConfig[@"phoneNo"];
+            tempAttributesDic = self.phoneNoAttributes;
+            tempHighLightAttributesDic = self.phoneNoHighlightAttributes;
+        }
+            break;
+        default:
+        {
+            pattern = self.autoCheckConfig[@"phoneNo"];
+            tempAttributesDic = self.phoneNoAttributes;
+            tempHighLightAttributesDic = self.phoneNoHighlightAttributes;
+        }
+            break;
+    }
+    NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
+    NSArray * arr = [regex matchesInString:str.string options:0 range:NSMakeRange(0, str.length)];
+    [arr enumerateObjectsUsingBlock:^(NSTextCheckingResult * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSRange range = obj.range;
+        NSDictionary * dic = @{@"link":[str.string substringWithRange:range],@"range":[NSValue valueWithRange:range],@"linkType":@(linkType),@"target":self,@"SEL":NSStringFromSelector(@selector(autoLinkClicked:))};
+        [str addAttribute:@"autoCheckLink" value:dic range:range];
+        if (self.linkClicked && self.highlightDic) {
+            if (NSEqualRanges(range, [self.highlightDic[@"range"] rangeValue])) {
+                [str addAttributes:tempHighLightAttributesDic range:range];
+            }
+            else
+            {
+                if (tempAttributesDic) {
+                    [str addAttributes:tempAttributesDic range:range];
+                }
+            }
+        }
+        else
+        {
+            if (tempAttributesDic) {
+                [str addAttributes:tempAttributesDic range:range];
+            }
+        }
+    }];
+}
+
 #pragma mark ---绘制相关---
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
@@ -333,6 +397,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame
 {
     [self.activeTextArr removeAllObjects];
+    [self.autoLinkArr removeAllObjects];
     [self enumerateCTRunInFrame:frame handler:^(CTLineRef line, CTRunRef run,CGPoint origin,BOOL * stop) {
         CGRect deleteBounds = [self getCTRunBoundsWithFrame:frame line:line lineOrigin:origin run:run];
         if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
@@ -345,13 +410,21 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         
         if (delegate == nil) {///检测图片，不是图片检测文字
             NSMutableDictionary * dic = attributes[@"clickAttribute"];
-            if (!dic) {///不是活动文字跳过
-                return ;
+            if (!dic) {///不是活动文字检测自动链接
+                if (self.autoCheckLink) {///检测自动链接
+                    dic = attributes[@"autoCheckLink"];
+                    if (!dic) {///不是自动链接返回
+                        return;
+                    }
+                    [self handleFrameWithArr:self.autoLinkArr dic:dic bounds:deleteBounds];
+                    return;
+                }
+                else
+                {
+                    return;
+                }
             }
-            NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
-            NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
-            dicWithFrame[@"frame"] = boundsValue;
-            [self.activeTextArr addObject:dicWithFrame];
+            [self handleFrameWithArr:self.activeTextArr dic:dic bounds:deleteBounds];
             return;
         }
         NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
@@ -372,6 +445,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
             dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
         }
     }];
+}
+
+///补全frame
+-(void)handleFrameWithArr:(NSMutableArray *)arr dic:(NSDictionary *)dic bounds:(CGRect)deleteBounds
+{
+    NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
+    NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
+    dicWithFrame[@"frame"] = boundsValue;
+    [arr addObject:dicWithFrame];
 }
 
 #pragma mark ---获取相关数据方法---
@@ -551,11 +633,11 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return dicClicked;
 }
 
-///获取活动文字中包含点的字典
--(NSMutableDictionary *)getActiveTextDicWithPoint:(CGPoint)point
+///从对应数组中获取字典
+-(NSMutableDictionary *)getDicWithPoint:(CGPoint)point arr:(NSMutableArray *)arr
 {
     __block NSMutableDictionary * dicClicked = nil;
-    [self.activeTextArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+    [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         CGRect frame = [dic[@"frame"] CGRectValue];
         if (CGRectContainsPoint(frame, point)) {
             if (dic[@"target"] && dic[@"SEL"]) {
@@ -565,6 +647,18 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         }
     }];
     return dicClicked;
+}
+
+///获取活动文字中包含点的字典
+-(NSMutableDictionary *)getActiveTextDicWithPoint:(CGPoint)point
+{
+    return [self getDicWithPoint:point arr:self.activeTextArr];
+}
+
+///获取自动链接中包含点的字典
+-(NSMutableDictionary *)getAutoLinkDicWithPoint:(CGPoint)point
+{
+    return [self getDicWithPoint:point arr:self.autoLinkArr];
 }
 
 #pragma mark ---镜像转换方法---
@@ -597,6 +691,12 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (dic) {
         [self handleHighlightClickWithDic:dic];
         return;
+    } else {
+        dic = [self getAutoLinkDicWithPoint:point];
+        if (dic) {
+            [self handleHighlightClickWithDic:dic];
+            return;
+        }
     }
     [super touchesBegan:touches withEvent:event];
 }
@@ -609,6 +709,10 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         if (!self.hasActionToDo) {
             if (self.textClicked) {
                 self.textClicked = NO;
+                self.highlightDic = nil;
+                [self setNeedsDisplay];
+            } else if (self.linkClicked) {
+                self.linkClicked = NO;
                 self.highlightDic = nil;
                 [self setNeedsDisplay];
             }
@@ -632,12 +736,22 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
             if (self.textClicked) {
                 self.textClicked = NO;
                 [self setNeedsDisplay];
+            } else if (self.linkClicked) {
+                self.linkClicked = NO;
+                [self setNeedsDisplay];
             }
             [self handleClickWithDic:dic];
             return;
         }
     }
     [super touchesEnded:touches withEvent:event];
+}
+
+-(void)autoLinkClicked:(NSDictionary *)userInfo
+{
+    if (self.delegate && [self.delegate respondsToSelector:@selector(coreTextLabel:didSelectLink:range:linkType:)]) {
+        [self.delegate coreTextLabel:self didSelectLink:userInfo[@"link"] range:[userInfo[@"range"] rangeValue] linkType:[userInfo[@"linkType"] integerValue]];
+    }
 }
 
 ///处理点击事件
@@ -651,6 +765,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
     invocation.target = target;
     invocation.selector = selector;
+    if ([target isEqual:self]) {
+        [invocation setArgument:&dic atIndex:2];
+    }
     [invocation invoke];
 }
 
@@ -661,13 +778,16 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (self.activeTextHighlightAttributes) {
         self.textClicked = YES;
         [self setNeedsDisplay];
+    } else if (self.autoCheckLink) {
+        self.linkClicked = YES;
+        [self setNeedsDisplay];
     }
 }
 
 ///处理具有响应事件状态
 -(void)handleHasActionStatusWithPoint:(CGPoint)point
 {
-    self.hasActionToDo = ([self getImageDicWithPoint:point] || [self getActiveTextDicWithPoint:point]);
+    self.hasActionToDo = ([self getImageDicWithPoint:point] || [self getActiveTextDicWithPoint:point] || [self getAutoLinkDicWithPoint:point]);
 }
 
 #pragma mark ---CTRun 代理---
@@ -724,7 +844,12 @@ static CGFloat widthCallBacks(void * ref)
         self.mAStr = [self getMAStrWithLimitWidth:limitWidth];
     }
     
-    ///添加点击事件
+    ///处理自动检测链接
+    if (self.autoCheckLink) {
+        [self handleAutoCheckLinkWithStr:self.mAStr];
+    }
+    
+    ///添加活跃文本属性方法
     [self handleActiveTextWithStr:self.mAStr withImage:!self.reCalculate];
     
     ///处理插入图片
@@ -966,6 +1091,14 @@ static CGFloat widthCallBacks(void * ref)
     return _activeTextArr;
 }
 
+-(NSMutableArray *)autoLinkArr
+{
+    if (!_autoLinkArr) {
+        _autoLinkArr = [NSMutableArray array];
+    }
+    return _autoLinkArr;
+}
+
 -(NSMutableArray *)exclusionP
 {
     return [[NSMutableArray alloc] initWithArray:self.exclusionPaths copyItems:YES];
@@ -981,6 +1114,45 @@ static CGFloat widthCallBacks(void * ref)
 {
     _lineBreakMode = lineBreakMode;
     [self handleAutoRedrawWithRecalculate:YES];
+}
+
+-(void)setAutoCheckConfig:(NSMutableDictionary *)autoCheckConfig
+{
+    if (self.autoCheckLink) {
+        _autoCheckConfig = autoCheckConfig;
+        [self handleAutoRedrawWithRecalculate:NO];
+    }
+}
+
+-(NSMutableDictionary *)autoCheckConfig
+{
+    return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)"}]):nil;
+}
+
+-(void)setPhoneNoAttributes:(NSDictionary *)phoneNoAttributes
+{
+    _phoneNoAttributes = phoneNoAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO];
+    }
+}
+
+-(NSDictionary *)phoneNoAttributes
+{
+    return self.autoCheckLink?(_phoneNoAttributes?_phoneNoAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor blueColor]}):nil;
+}
+
+-(void)setPhoneNoHighlightAttributes:(NSDictionary *)phoneNoHighlightAttributes
+{
+    _phoneNoHighlightAttributes = phoneNoHighlightAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO];
+    }
+}
+
+-(NSDictionary *)phoneNoHighlightAttributes
+{
+    return self.autoCheckLink?(_phoneNoHighlightAttributes?_phoneNoHighlightAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor redColor]}):nil;
 }
 
 -(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes
