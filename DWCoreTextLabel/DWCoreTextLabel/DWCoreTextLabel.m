@@ -69,9 +69,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @synthesize textColor = _textColor;
 @synthesize exclusionPaths = _exclusionPaths;
 @synthesize lineSpacing = _lineSpacing;
+@synthesize autoCheckConfig = _autoCheckConfig;
 @synthesize phoneNoAttributes = _phoneNoAttributes;
 @synthesize phoneNoHighlightAttributes = _phoneNoHighlightAttributes;
-@synthesize autoCheckConfig = _autoCheckConfig;
 
 #pragma mark ---接口方法---
 
