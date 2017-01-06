@@ -67,6 +67,17 @@
  添加自动检测链接属性
  添加代理，提供自动链接点击代理
  初步完成电话号码自动检测
+ 
+ version 1.0.16
+ 部分赋值重绘规则优化，减少不必要重绘
+ 添加email、URL自动链接识别
+ 优化自动链接与活跃文本的优先级：活跃文本>email>URL>phoneNo
+ 
+ version 1.0.17
+ 添加自定制检测规则
+ 自动链接添加自然数类型
+ 当前链接优先级：活跃文本>自定制检测规则>email>URL>phoneNo>naturalNum
+ 调整代码分块
  */
 
 #import <UIKit/UIKit.h>
@@ -90,8 +101,15 @@ typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
 };
 
 typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
+    DWLinkTypeNaturalNum,
     DWLinkTypePhoneNo,
+    DWLinkTypeURL,
+    DWLinkTypeEmail,
+    DWLinkTypeCustom
 };
+
+#define DWDefaultAttributes @{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor blueColor]}
+#define DWDefaultHighlightAttributes @{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor redColor]}
 
 @class DWCoreTextLabel;
 @protocol DWCoreTextLabelDelegate <NSObject>
@@ -105,6 +123,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 
 @interface DWCoreTextLabel : UIView
 
+#pragma mark ---基本属性---
 ///代理
 @property (nonatomic ,weak) id<DWCoreTextLabelDelegate> delegate;
 
@@ -153,12 +172,6 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 @property (nonatomic ,assign) BOOL autoRedraw;
 
-///活跃文本的属性
-@property (nonatomic ,strong) NSDictionary * activeTextAttributes;
-
-///活跃文本的高亮属性
-@property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
-
 /**
  自动检测特殊链接
  
@@ -173,10 +186,37 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  自动检测的配置字典
  
  用于定制检测规则
+ 可修改本配置字典以达到改变检测规则或减少检测项
+ 
+ 注：
+ 1.可修改检测规则，及正则文本，不可添加或改变键名
+ 2.可减少键值对，不可增加预置类型外的键值对
+ 3.若想匹配预置类型外的规则，请使用customLinkRegex属性
  */
 @property (nonatomic ,strong) NSMutableDictionary * autoCheckConfig;
 
+/**
+ 匹配自定制特殊链接的正则
+ */
+@property (nonatomic ,copy) NSString * customLinkRegex;
+
+#pragma mark ---链接属性---
+///活跃文本的属性
+@property (nonatomic ,strong) NSDictionary * activeTextAttributes;
+
+///活跃文本的高亮属性
+@property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
 ///以下属性在autoCheckLink为真时有效
+/**
+ 自然数属性
+ */
+@property (nonatomic ,strong) NSDictionary * naturalNumAttributes;
+
+/**
+ 自然数高亮属性
+ */
+@property (nonatomic ,strong) NSDictionary * naturalNumHighlightAttributes;
+
 /**
  电话号码属性
  */
@@ -187,7 +227,37 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 @property (nonatomic ,strong) NSDictionary * phoneNoHighlightAttributes;
 
+/**
+ URL属性
+ */
+@property (nonatomic ,strong) NSDictionary * URLAttributes;
 
+/**
+ URL高亮时属性
+ */
+@property (nonatomic ,strong) NSDictionary * URLHighlightAttributes;
+
+/**
+ email属性
+ */
+@property (nonatomic ,strong) NSDictionary * emailAttributes;
+
+/**
+ email高亮时属性
+ */
+@property (nonatomic ,strong) NSDictionary * emailHighlightAttributes;
+
+/**
+ 自定制链接属性
+ */
+@property (nonatomic ,strong) NSDictionary * customLinkAttributes;
+
+/**
+ 自定制链接高亮时属性
+ */
+@property (nonatomic ,strong) NSDictionary * customLinkHighlightAttributes;
+
+#pragma mark ---方法---
 /**
  以frame绘制矩形图片
  
@@ -248,3 +318,4 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 +(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode;
 @end
+

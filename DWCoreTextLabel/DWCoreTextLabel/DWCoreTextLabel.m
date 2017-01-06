@@ -62,6 +62,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 ///首次绘制
 @property (nonatomic ,assign) BOOL finishFirstDraw;
 
+///自动链接检测结果字典
+@property (nonatomic ,strong) NSMutableDictionary * autoCheckLinkDic;
+
+///自定制链接检测结果字典
+@property (nonatomic ,strong) NSMutableDictionary * customLinkDic;
+
+///重新自动检测
+@property (nonatomic ,assign) BOOL reCheck;
+
 @end
 
 @implementation DWCoreTextLabel
@@ -72,6 +81,12 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @synthesize autoCheckConfig = _autoCheckConfig;
 @synthesize phoneNoAttributes = _phoneNoAttributes;
 @synthesize phoneNoHighlightAttributes = _phoneNoHighlightAttributes;
+@synthesize emailAttributes = _emailAttributes;
+@synthesize emailHighlightAttributes = _emailHighlightAttributes;
+@synthesize URLAttributes = _URLAttributes;
+@synthesize URLHighlightAttributes = _URLHighlightAttributes;
+@synthesize naturalNumAttributes = _naturalNumAttributes;
+@synthesize naturalNumHighlightAttributes = _naturalNumHighlightAttributes;
 
 #pragma mark ---接口方法---
 
@@ -87,7 +102,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
     }
     [self.imageArr addObject:dic];
-    [self handleAutoRedrawWithRecalculate:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
 }
 
 ///以指定模式绘制图片
@@ -105,7 +120,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
     }
     [self.imageArr addObject:dic];
-    [self handleAutoRedrawWithRecalculate:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
 ///以路径绘制图片
@@ -125,7 +140,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
     }
     [self.imageArr addObject:dic];
-    [self handleAutoRedrawWithRecalculate:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
 ///给指定范围添加响应事件
@@ -134,7 +149,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (target && selector && range.length > 0) {
         NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"target":target,@"SEL":NSStringFromSelector(selector),@"range":[NSValue valueWithRange:range]}];
         [self.textRangeArr addObject:dic];
-        [self handleAutoRedrawWithRecalculate:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
     }
 }
 
@@ -260,13 +275,14 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///添加活跃文本属性方法
--(void)handleActiveTextWithStr:(NSMutableAttributedString *)str withImage:(BOOL)withImage
+-(void)handleActiveTextWithStr:(NSMutableAttributedString *)str withImage:(BOOL)withImage rangeSet:(NSMutableSet *)rangeSet
 {
     [self.textRangeArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
         NSRange range = [dic[@"range"] rangeValue];
         if (withImage) {
             range = [self handleRangeOffset:range];
         }
+        [rangeSet addObject:[NSValue valueWithRange:range]];
         [str addAttribute:@"clickAttribute" value:dic range:range];
         if (self.textClicked && self.highlightDic) {
             if (NSEqualRanges([dic[@"range"] rangeValue], [self.highlightDic[@"range"] rangeValue])) {
@@ -303,25 +319,69 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     return newRange;
 }
 
+///添加活跃文本、处理高亮状态
+-(void)handleTextHighlightAttributesWithStr:(NSMutableAttributedString *)str withImage:(BOOL)withImage
+{
+    NSMutableSet<NSValue *> * rangeSet = [NSMutableSet set];
+    ///添加活跃文本属性方法
+    [self handleActiveTextWithStr:str withImage:!self.reCalculate rangeSet:rangeSet];
+    ///处理自定制链接
+    [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:str rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink"];
+    ///处理自动检测链接
+    if (self.autoCheckLink) {
+        [self handleAutoCheckLinkWithStr:str rangeSet:rangeSet];
+    }
+}
 #pragma mark ---自动检测链接相关---
 ///自动检测链接方法
--(void)handleAutoCheckLinkWithStr:(NSMutableAttributedString *)str
+-(void)handleAutoCheckLinkWithStr:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet
 {
-    [self handleAutoCheckWithLinkType:DWLinkTypePhoneNo str:str];
+    [self handleAutoCheckWithLinkType:DWLinkTypeEmail str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
+    [self handleAutoCheckWithLinkType:DWLinkTypeURL str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
+    [self handleAutoCheckWithLinkType:DWLinkTypePhoneNo str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
+    [self handleAutoCheckWithLinkType:DWLinkTypeNaturalNum str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
 }
 
 ///根据类型处理自动链接
--(void)handleAutoCheckWithLinkType:(DWLinkType)linkType str:(NSMutableAttributedString *)str
+-(void)handleAutoCheckWithLinkType:(DWLinkType)linkType str:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet linkDic:(NSMutableDictionary *)linkDic attributeName:(NSString *)attributeName
 {
     NSString * pattern = @"";
     NSDictionary * tempAttributesDic = nil;
     NSDictionary * tempHighLightAttributesDic = nil;
     switch (linkType) {
+        case DWLinkTypeNaturalNum:
+        {
+            pattern = self.autoCheckConfig[@"naturalNum"];
+            tempAttributesDic = self.naturalNumAttributes;
+            tempHighLightAttributesDic = self.naturalNumHighlightAttributes;
+        }
+            break;
         case DWLinkTypePhoneNo:
         {
             pattern = self.autoCheckConfig[@"phoneNo"];
             tempAttributesDic = self.phoneNoAttributes;
             tempHighLightAttributesDic = self.phoneNoHighlightAttributes;
+        }
+            break;
+        case DWLinkTypeEmail:
+        {
+            pattern = self.autoCheckConfig[@"email"];
+            tempAttributesDic = self.emailAttributes;
+            tempHighLightAttributesDic = self.emailHighlightAttributes;
+        }
+            break;
+        case DWLinkTypeURL:
+        {
+            pattern = self.autoCheckConfig[@"URL"];
+            tempAttributesDic = self.URLAttributes;
+            tempHighLightAttributesDic = self.URLHighlightAttributes;
+        }
+            break;
+        case DWLinkTypeCustom:
+        {
+            pattern = self.customLinkRegex.length?self.customLinkRegex:@"";
+            tempAttributesDic = self.customLinkAttributes;
+            tempHighLightAttributesDic = self.customLinkHighlightAttributes;
         }
             break;
         default:
@@ -332,15 +392,48 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         }
             break;
     }
-    NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
-    NSArray * arr = [regex matchesInString:str.string options:0 range:NSMakeRange(0, str.length)];
-    [arr enumerateObjectsUsingBlock:^(NSTextCheckingResult * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        NSRange range = obj.range;
-        NSDictionary * dic = @{@"link":[str.string substringWithRange:range],@"range":[NSValue valueWithRange:range],@"linkType":@(linkType),@"target":self,@"SEL":NSStringFromSelector(@selector(autoLinkClicked:))};
-        [str addAttribute:@"autoCheckLink" value:dic range:range];
-        if (self.linkClicked && self.highlightDic) {
-            if (NSEqualRanges(range, [self.highlightDic[@"range"] rangeValue])) {
-                [str addAttributes:tempHighLightAttributesDic range:range];
+    if (pattern.length) {
+        NSMutableArray * arrLink = nil;
+        if (self.reCheck) {
+            NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
+            NSArray * arr = [regex matchesInString:str.string options:0 range:NSMakeRange(0, str.length)];
+            NSMutableArray * arrTemp = [NSMutableArray array];
+            [arr enumerateObjectsUsingBlock:^(NSTextCheckingResult * result, NSUInteger idx, BOOL * _Nonnull stop) {
+                __block BOOL contain = NO;
+                [rangeSet enumerateObjectsUsingBlock:^(NSValue * RValue, BOOL * _Nonnull stop) {
+                    NSRange range = NSIntersectionRange([RValue rangeValue], result.range);
+                    if (range.length > 0) {
+                        contain = YES;
+                        *stop = YES;
+                    }
+                }];
+                if (!contain) {
+                    [arrTemp addObject:result];
+                    [rangeSet addObject:[NSValue valueWithRange:result.range]];
+                }
+            }];
+            [linkDic setValue:arrTemp forKey:pattern];
+            arrLink = arrTemp;
+        }
+        else
+        {
+            arrLink = linkDic[pattern];
+        }
+        
+        [arrLink enumerateObjectsUsingBlock:^(NSTextCheckingResult * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            NSRange range = obj.range;
+            NSDictionary * dic = @{@"link":[str.string substringWithRange:range],@"range":[NSValue valueWithRange:range],@"linkType":@(linkType),@"target":self,@"SEL":NSStringFromSelector(@selector(autoLinkClicked:))};
+            [str addAttribute:attributeName value:dic range:range];
+            if (self.linkClicked && self.highlightDic) {
+                if (NSEqualRanges(range, [self.highlightDic[@"range"] rangeValue])) {
+                    [str addAttributes:tempHighLightAttributesDic range:range];
+                }
+                else
+                {
+                    if (tempAttributesDic) {
+                        [str addAttributes:tempAttributesDic range:range];
+                    }
+                }
             }
             else
             {
@@ -348,26 +441,33 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
                     [str addAttributes:tempAttributesDic range:range];
                 }
             }
-        }
-        else
-        {
-            if (tempAttributesDic) {
-                [str addAttributes:tempAttributesDic range:range];
-            }
-        }
-    }];
+        }];
+    }
 }
 
 #pragma mark ---绘制相关---
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
+                               reCheck:(BOOL)reCheck
 {
     if (self.finishFirstDraw) {
         self.reCalculate = reCalculate;
+        self.reCheck = reCheck;
     }
     if (self.autoRedraw) {
         [self setNeedsDisplay];
     }
+}
+
+///文本变化相关处理
+-(void)handleTextChange
+{
+    [self.imageArr removeAllObjects];
+    [self.activeTextArr removeAllObjects];
+    [self.autoLinkArr removeAllObjects];
+    [self.textRangeArr removeAllObjects];
+    [self.arrLocationImgHasAdd removeAllObjects];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
 }
 
 ///处理图片环绕数组，绘制前调用
@@ -410,19 +510,19 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         
         if (delegate == nil) {///检测图片，不是图片检测文字
             NSMutableDictionary * dic = attributes[@"clickAttribute"];
-            if (!dic) {///不是活动文字检测自动链接
-                if (self.autoCheckLink) {///检测自动链接
+            if (!dic) {///不是活动文字检测自动链接及定制链接
+                if (self.customLinkRegex.length) {
+                    dic = attributes[@"customLink"];
+                }
+                
+                if (!dic && self.autoCheckLink) {
                     dic = attributes[@"autoCheckLink"];
-                    if (!dic) {///不是自动链接返回
-                        return;
-                    }
-                    [self handleFrameWithArr:self.autoLinkArr dic:dic bounds:deleteBounds];
+                }
+                if (!dic) {
                     return;
                 }
-                else
-                {
-                    return;
-                }
+                [self handleFrameWithArr:self.autoLinkArr dic:dic bounds:deleteBounds];
+                return;
             }
             [self handleFrameWithArr:self.activeTextArr dic:dic bounds:deleteBounds];
             return;
@@ -778,7 +878,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (self.activeTextHighlightAttributes) {
         self.textClicked = YES;
         [self setNeedsDisplay];
-    } else if (self.autoCheckLink) {
+    } else if (self.customLinkRegex.length || self.autoCheckLink) {
         self.linkClicked = YES;
         [self setNeedsDisplay];
     }
@@ -822,6 +922,7 @@ static CGFloat widthCallBacks(void * ref)
         _lineSpacing = - 65536;
         _lineBreakMode = NSLineBreakByCharWrapping;
         _reCalculate = YES;
+        _reCheck = YES;
         self.backgroundColor = [UIColor clearColor];
     }
     return self;
@@ -844,13 +945,8 @@ static CGFloat widthCallBacks(void * ref)
         self.mAStr = [self getMAStrWithLimitWidth:limitWidth];
     }
     
-    ///处理自动检测链接
-    if (self.autoCheckLink) {
-        [self handleAutoCheckLinkWithStr:self.mAStr];
-    }
-    
-    ///添加活跃文本属性方法
-    [self handleActiveTextWithStr:self.mAStr withImage:!self.reCalculate];
+    ///添加活跃文本并处理高亮文本
+    [self handleTextHighlightAttributesWithStr:self.mAStr withImage:self.reCalculate];
     
     ///处理插入图片
     if (self.reCalculate) {
@@ -920,6 +1016,7 @@ static CGFloat widthCallBacks(void * ref)
     }];
     
     self.reCalculate = NO;
+    self.reCheck = NO;
     self.finishFirstDraw = YES;
     ///绘制上下文
     CTFrameDraw(_frame, context);
@@ -963,23 +1060,25 @@ static CGFloat widthCallBacks(void * ref)
 #pragma mark ---setter、getter---
 -(void)setText:(NSString *)text
 {
-    _text = text;
-    [self handleAutoRedrawWithRecalculate:YES];
+    if (![_text isEqualToString:text]) {
+        _text = text;
+        [self handleTextChange];
+    }
 }
 
 -(void)setTextAlignment:(NSTextAlignment)textAlignment
 {
-    if (self.exclusionPaths.count == 0) {
+    if ((self.exclusionPaths.count == 0) && (_textAlignment != textAlignment)) {
         _textAlignment = textAlignment;
-        [self handleAutoRedrawWithRecalculate:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
     }
 }
 
 -(void)setTextVerticalAlignment:(DWTextVerticalAlignment)textVerticalAlignment
 {
-    if (self.exclusionPaths.count == 0) {
+    if ((self.exclusionPaths.count == 0) && (_textVerticalAlignment != textVerticalAlignment)) {
         _textVerticalAlignment = textVerticalAlignment;
-        [self handleAutoRedrawWithRecalculate:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
     }
 }
 
@@ -994,25 +1093,31 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setFont:(UIFont *)font
 {
     _font = font;
-    [self handleAutoRedrawWithRecalculate:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
 -(void)setTextInsets:(UIEdgeInsets)textInsets
 {
-    _textInsets = textInsets;
-    [self handleAutoRedrawWithRecalculate:YES];
+    if (!UIEdgeInsetsEqualToEdgeInsets(_textInsets, textInsets)) {
+        _textInsets = textInsets;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    }
 }
 
 -(void)setAttributedText:(NSAttributedString *)attributedText
 {
-    _attributedText = attributedText;
-    [self handleAutoRedrawWithRecalculate:YES];
+    if (![_attributedText isEqualToAttributedString:attributedText]) {
+        _attributedText = attributedText;
+        [self handleTextChange];
+    }
 }
 
 -(void)setTextColor:(UIColor *)textColor
 {
-    _textColor = textColor;
-    [self handleAutoRedrawWithRecalculate:YES];
+    if (!CGColorEqualToColor(_textColor.CGColor,textColor.CGColor)) {
+        _textColor = textColor;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    }
 }
 
 -(UIColor *)textColor
@@ -1025,8 +1130,10 @@ static CGFloat widthCallBacks(void * ref)
 
 -(void)setLineSpacing:(CGFloat)lineSpacing
 {
-    _lineSpacing = lineSpacing;
-    [self handleAutoRedrawWithRecalculate:YES];
+    if (_lineSpacing != lineSpacing) {
+        _lineSpacing = lineSpacing;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    }
 }
 
 -(CGFloat)lineSpacing
@@ -1048,9 +1155,193 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setExclusionPaths:(NSMutableArray<UIBezierPath *> *)exclusionPaths
 {
     _exclusionPaths = exclusionPaths;
-    [self handleAutoRedrawWithRecalculate:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
+-(void)setNumberOfLines:(NSUInteger)numberOfLines
+{
+    if (_numberOfLines != numberOfLines) {
+        _numberOfLines = numberOfLines;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    }
+}
+
+-(void)setLineBreakMode:(NSLineBreakMode)lineBreakMode
+{
+    if (_lineBreakMode != lineBreakMode) {
+        _lineBreakMode = lineBreakMode;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    }
+}
+
+-(void)setAutoCheckLink:(BOOL)autoCheckLink
+{
+    if (_autoCheckLink != autoCheckLink) {
+        _autoCheckLink = autoCheckLink;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    }
+}
+
+-(void)setAutoCheckConfig:(NSMutableDictionary *)autoCheckConfig
+{
+    _autoCheckConfig = autoCheckConfig;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    }
+}
+
+-(NSMutableDictionary *)autoCheckConfig
+{
+    return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)",@"email":@"[A-Za-z\\d]+([-_.][A-Za-z\\d]+)*@([A-Za-z\\d]+[-.])*([A-Za-z\\d]+[.])+[A-Za-z\\d]{2,5}",@"URL":@"((http|ftp|https)://)?((([a-zA-Z0-9]+[a-zA-Z0-9_-]*\\.)+[a-zA-Z]{2,6})|(([0-9]{1,3}\\.){3}[0-9]{1,3}(:[0-9]{1,4})?))((/[a-zA-Z\\d]+)*(\\?([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+&)*([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+))?)?",@"naturalNum":@"\\d+(\\.\\d+)?"}]):nil;
+}
+
+-(void)setFrame:(CGRect)frame
+{
+    if (!CGRectEqualToRect(self.frame, frame)) {
+        [super setFrame:frame];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    }
+}
+
+#pragma mark ---链接属性setter、getter---
+-(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes
+{
+    _activeTextAttributes = activeTextAttributes;
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+}
+
+-(void)setActiveTextHighlightAttributes:(NSDictionary *)activeTextHighlightAttributes
+{
+    _activeTextHighlightAttributes = activeTextHighlightAttributes;
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+}
+
+-(void)setNaturalNumAttributes:(NSDictionary *)naturalNumAttributes
+{
+    _naturalNumAttributes = naturalNumAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)naturalNumAttributes
+{
+    return self.autoCheckLink?(_naturalNumAttributes?_naturalNumAttributes:DWDefaultAttributes):nil;
+}
+
+-(void)setNaturalNumHighlightAttributes:(NSDictionary *)naturalNumHighlightAttributes
+{
+    _naturalNumHighlightAttributes = naturalNumHighlightAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)naturalNumHighlightAttributes
+{
+    return self.autoCheckLink?(_naturalNumHighlightAttributes?_naturalNumHighlightAttributes:DWDefaultHighlightAttributes):nil;
+}
+
+-(void)setPhoneNoAttributes:(NSDictionary *)phoneNoAttributes
+{
+    _phoneNoAttributes = phoneNoAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)phoneNoAttributes
+{
+    return self.autoCheckLink?(_phoneNoAttributes?_phoneNoAttributes:DWDefaultAttributes):nil;
+}
+
+-(void)setPhoneNoHighlightAttributes:(NSDictionary *)phoneNoHighlightAttributes
+{
+    _phoneNoHighlightAttributes = phoneNoHighlightAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)phoneNoHighlightAttributes
+{
+    return self.autoCheckLink?(_phoneNoHighlightAttributes?_phoneNoHighlightAttributes:DWDefaultHighlightAttributes):nil;
+}
+
+-(void)setURLAttributes:(NSDictionary *)URLAttributes
+{
+    _URLAttributes = URLAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)URLAttributes
+{
+    return self.autoCheckLink?(_URLAttributes?_URLAttributes:DWDefaultAttributes):nil;
+}
+
+-(void)setURLHighlightAttributes:(NSDictionary *)URLHighlightAttributes
+{
+    _URLHighlightAttributes = URLHighlightAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)URLHighlightAttributes
+{
+    return self.autoCheckLink?(_URLHighlightAttributes?_URLHighlightAttributes:DWDefaultHighlightAttributes):nil;
+}
+
+
+-(void)setEmailAttributes:(NSDictionary *)emailAttributes
+{
+    _emailAttributes = emailAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)emailAttributes
+{
+    return self.autoCheckLink?(_emailAttributes?_emailAttributes:DWDefaultAttributes):nil;
+}
+
+-(void)setEmailHighlightAttributes:(NSDictionary *)emailHighlightAttributes
+{
+    _emailHighlightAttributes = emailHighlightAttributes;
+    if (self.autoCheckLink) {
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    }
+}
+
+-(NSDictionary *)emailHighlightAttributes
+{
+    return self.autoCheckLink?(_emailHighlightAttributes?_emailHighlightAttributes:DWDefaultHighlightAttributes):nil;
+}
+
+-(void)setCustomLinkRegex:(NSString *)customLinkRegex
+{
+    if (![_customLinkRegex isEqualToString:customLinkRegex]) {
+        _customLinkRegex = customLinkRegex;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    }
+}
+
+-(void)setCustomLinkAttributes:(NSDictionary *)customLinkAttributes
+{
+    _customLinkAttributes = customLinkAttributes;
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+}
+
+-(void)setCustomLinkHighlightAttributes:(NSDictionary *)customLinkHighlightAttributes
+{
+    _customLinkHighlightAttributes = customLinkHighlightAttributes;
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+}
+
+#pragma mark ---中间容器属性setter、getter---
 -(NSMutableArray *)imageArr
 {
     if (!_imageArr) {
@@ -1104,73 +1395,20 @@ static CGFloat widthCallBacks(void * ref)
     return [[NSMutableArray alloc] initWithArray:self.exclusionPaths copyItems:YES];
 }
 
--(void)setNumberOfLines:(NSUInteger)numberOfLines
-{
-    _numberOfLines = numberOfLines;
-    [self handleAutoRedrawWithRecalculate:YES];
-}
 
--(void)setLineBreakMode:(NSLineBreakMode)lineBreakMode
+-(NSMutableDictionary *)autoCheckLinkDic
 {
-    _lineBreakMode = lineBreakMode;
-    [self handleAutoRedrawWithRecalculate:YES];
-}
-
--(void)setAutoCheckConfig:(NSMutableDictionary *)autoCheckConfig
-{
-    if (self.autoCheckLink) {
-        _autoCheckConfig = autoCheckConfig;
-        [self handleAutoRedrawWithRecalculate:NO];
+    if (!_autoCheckLinkDic) {
+        _autoCheckLinkDic = [NSMutableDictionary dictionary];
     }
+    return _autoCheckLinkDic;
 }
 
--(NSMutableDictionary *)autoCheckConfig
+-(NSMutableDictionary *)customLinkDic
 {
-    return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)"}]):nil;
-}
-
--(void)setPhoneNoAttributes:(NSDictionary *)phoneNoAttributes
-{
-    _phoneNoAttributes = phoneNoAttributes;
-    if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO];
+    if (!_customLinkDic) {
+        _customLinkDic = [NSMutableDictionary dictionary];
     }
+    return _customLinkDic;
 }
-
--(NSDictionary *)phoneNoAttributes
-{
-    return self.autoCheckLink?(_phoneNoAttributes?_phoneNoAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor blueColor]}):nil;
-}
-
--(void)setPhoneNoHighlightAttributes:(NSDictionary *)phoneNoHighlightAttributes
-{
-    _phoneNoHighlightAttributes = phoneNoHighlightAttributes;
-    if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO];
-    }
-}
-
--(NSDictionary *)phoneNoHighlightAttributes
-{
-    return self.autoCheckLink?(_phoneNoHighlightAttributes?_phoneNoHighlightAttributes:@{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor redColor]}):nil;
-}
-
--(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes
-{
-    _activeTextAttributes = activeTextAttributes;
-    [self handleAutoRedrawWithRecalculate:NO];
-}
-
--(void)setActiveTextHighlightAttributes:(NSDictionary *)activeTextHighlightAttributes
-{
-    _activeTextHighlightAttributes = activeTextHighlightAttributes;
-    [self handleAutoRedrawWithRecalculate:NO];
-}
-
--(void)setFrame:(CGRect)frame
-{
-    [super setFrame:frame];
-    [self handleAutoRedrawWithRecalculate:YES];
-}
-
 @end
