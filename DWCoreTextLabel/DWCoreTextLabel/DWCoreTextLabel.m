@@ -324,26 +324,26 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 {
     NSMutableSet<NSValue *> * rangeSet = [NSMutableSet set];
     ///添加活跃文本属性方法
-    [self handleActiveTextWithStr:str withImage:!self.reCalculate rangeSet:rangeSet];
+    [self handleActiveTextWithStr:str withImage:withImage rangeSet:rangeSet];
     ///处理自定制链接
-    [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:str rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink"];
+    [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:str rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink" withImage:withImage];
     ///处理自动检测链接
     if (self.autoCheckLink) {
-        [self handleAutoCheckLinkWithStr:str rangeSet:rangeSet];
+        [self handleAutoCheckLinkWithStr:str rangeSet:rangeSet withImage:withImage];
     }
 }
 #pragma mark ---自动检测链接相关---
 ///自动检测链接方法
--(void)handleAutoCheckLinkWithStr:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet
+-(void)handleAutoCheckLinkWithStr:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet withImage:(BOOL)withImage
 {
-    [self handleAutoCheckWithLinkType:DWLinkTypeEmail str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
-    [self handleAutoCheckWithLinkType:DWLinkTypeURL str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
-    [self handleAutoCheckWithLinkType:DWLinkTypePhoneNo str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
-    [self handleAutoCheckWithLinkType:DWLinkTypeNaturalNum str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink"];
+    [self handleAutoCheckWithLinkType:DWLinkTypeEmail str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink" withImage:withImage];
+    [self handleAutoCheckWithLinkType:DWLinkTypeURL str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink" withImage:withImage];
+    [self handleAutoCheckWithLinkType:DWLinkTypePhoneNo str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink" withImage:withImage];
+    [self handleAutoCheckWithLinkType:DWLinkTypeNaturalNum str:str rangeSet:rangeSet linkDic:self.autoCheckLinkDic attributeName:@"autoCheckLink" withImage:withImage];
 }
 
 ///根据类型处理自动链接
--(void)handleAutoCheckWithLinkType:(DWLinkType)linkType str:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet linkDic:(NSMutableDictionary *)linkDic attributeName:(NSString *)attributeName
+-(void)handleAutoCheckWithLinkType:(DWLinkType)linkType str:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet linkDic:(NSMutableDictionary *)linkDic attributeName:(NSString *)attributeName withImage:(BOOL)withImage
 {
     NSString * pattern = @"";
     NSDictionary * tempAttributesDic = nil;
@@ -422,10 +422,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
         
         [arrLink enumerateObjectsUsingBlock:^(NSTextCheckingResult * obj, NSUInteger idx, BOOL * _Nonnull stop) {
             NSRange range = obj.range;
+            NSRange highLightRange = [self.highlightDic[@"range"] rangeValue];
+            if (withImage) {
+                range = [self handleRangeOffset:range];
+                highLightRange = [self handleRangeOffset:highLightRange];
+            }
             NSDictionary * dic = @{@"link":[str.string substringWithRange:range],@"range":[NSValue valueWithRange:range],@"linkType":@(linkType),@"target":self,@"SEL":NSStringFromSelector(@selector(autoLinkClicked:))};
             [str addAttribute:attributeName value:dic range:range];
             if (self.linkClicked && self.highlightDic) {
-                if (NSEqualRanges(range, [self.highlightDic[@"range"] rangeValue])) {
+                if (NSEqualRanges(range, highLightRange)) {
                     [str addAttributes:tempHighLightAttributesDic range:range];
                 }
                 else
@@ -789,12 +794,12 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleHasActionStatusWithPoint:point];
     NSMutableDictionary * dic = [self getActiveTextDicWithPoint:point];
     if (dic) {
-        [self handleHighlightClickWithDic:dic];
+        [self handleHighlightClickWithDic:dic isLink:NO];
         return;
     } else {
         dic = [self getAutoLinkDicWithPoint:point];
         if (dic) {
-            [self handleHighlightClickWithDic:dic];
+            [self handleHighlightClickWithDic:dic isLink:YES];
             return;
         }
     }
@@ -872,13 +877,13 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///处理点击高亮
--(void)handleHighlightClickWithDic:(NSMutableDictionary *)dic
+-(void)handleHighlightClickWithDic:(NSMutableDictionary *)dic isLink:(BOOL)link
 {
     self.highlightDic = dic;
-    if (self.activeTextHighlightAttributes) {
+    if (!link && self.activeTextHighlightAttributes) {
         self.textClicked = YES;
         [self setNeedsDisplay];
-    } else if (self.customLinkRegex.length || self.autoCheckLink) {
+    } else if (link && (self.customLinkRegex.length || self.autoCheckLink)) {
         self.linkClicked = YES;
         [self setNeedsDisplay];
     }
@@ -946,7 +951,7 @@ static CGFloat widthCallBacks(void * ref)
     }
     
     ///添加活跃文本并处理高亮文本
-    [self handleTextHighlightAttributesWithStr:self.mAStr withImage:self.reCalculate];
+    [self handleTextHighlightAttributesWithStr:self.mAStr withImage:!self.reCalculate];
     
     ///处理插入图片
     if (self.reCalculate) {
@@ -1192,7 +1197,7 @@ static CGFloat widthCallBacks(void * ref)
 
 -(NSMutableDictionary *)autoCheckConfig
 {
-    return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)",@"email":@"[A-Za-z\\d]+([-_.][A-Za-z\\d]+)*@([A-Za-z\\d]+[-.])*([A-Za-z\\d]+[.])+[A-Za-z\\d]{2,5}",@"URL":@"((http|ftp|https)://)?((([a-zA-Z0-9]+[a-zA-Z0-9_-]*\\.)+[a-zA-Z]{2,6})|(([0-9]{1,3}\\.){3}[0-9]{1,3}(:[0-9]{1,4})?))((/[a-zA-Z\\d]+)*(\\?([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+&)*([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+))?)?",@"naturalNum":@"\\d+(\\.\\d+)?"}]):nil;
+    return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)",@"email":@"[A-Za-z\\d]+([-_.][A-Za-z\\d]+)*@([A-Za-z\\d]+[-.])*([A-Za-z\\d]+[.])+[A-Za-z\\d]{2,5}",@"URL":@"((http|ftp|https)://)?((([a-zA-Z0-9]+[a-zA-Z0-9_-]*\\.)+[a-zA-Z]{2,6})|(([0-9]{1,3}\\.){3}[0-9]{1,3}(:[0-9]{1,4})?))((/[a-zA-Z\\d_]+)*(\\?([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+&)*([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+))?)?",@"naturalNum":@"\\d+(\\.\\d+)?"}]):nil;
 }
 
 -(void)setFrame:(CGRect)frame

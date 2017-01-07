@@ -78,6 +78,10 @@
  自动链接添加自然数类型
  当前链接优先级：活跃文本>自定制检测规则>email>URL>phoneNo>naturalNum
  调整代码分块
+ 
+ version 1.0.18
+ 修复自动链接检测高亮范围bug
+ 修改URL类型自动链接检测规则
  */
 
 #import <UIKit/UIKit.h>

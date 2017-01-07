@@ -20,12 +20,44 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "504267053.992161"
+            timestampString = "505461984.555966"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "714"
-            endingLineNumber = "714"
-            landmarkName = "-touchesMoved:withEvent:"
+            startingLineNumber = "719"
+            endingLineNumber = "719"
+            landmarkName = "-enumerateCTRunInFrame:handler:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
+            timestampString = "505461984.555966"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "796"
+            endingLineNumber = "796"
+            landmarkName = "-touchesBegan:withEvent:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
+            timestampString = "505461359.415869"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "395"
+            endingLineNumber = "395"
+            landmarkName = "-handleAutoCheckWithLinkType:str:rangeSet:linkDic:attributeName:withImage:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
