@@ -82,6 +82,7 @@
  version 1.0.18
  修复自动链接检测高亮范围bug
  修改URL类型自动链接检测规则
+ 添加自定制检测链接默认属性
  */
 
 #import <UIKit/UIKit.h>

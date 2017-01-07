@@ -87,6 +87,8 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @synthesize URLHighlightAttributes = _URLHighlightAttributes;
 @synthesize naturalNumAttributes = _naturalNumAttributes;
 @synthesize naturalNumHighlightAttributes = _naturalNumHighlightAttributes;
+@synthesize customLinkAttributes = _customLinkAttributes;
+@synthesize customLinkHighlightAttributes = _customLinkHighlightAttributes;
 
 #pragma mark ---接口方法---
 
@@ -1200,6 +1202,14 @@ static CGFloat widthCallBacks(void * ref)
     return self.autoCheckLink?(_autoCheckConfig?_autoCheckConfig:[NSMutableDictionary dictionaryWithDictionary:@{@"phoneNo":@"(1[34578]\\d{9}|(0[\\d]{2,3}-)?([2-9][\\d]{6,7})(-[\\d]{1,4})?)",@"email":@"[A-Za-z\\d]+([-_.][A-Za-z\\d]+)*@([A-Za-z\\d]+[-.])*([A-Za-z\\d]+[.])+[A-Za-z\\d]{2,5}",@"URL":@"((http|ftp|https)://)?((([a-zA-Z0-9]+[a-zA-Z0-9_-]*\\.)+[a-zA-Z]{2,6})|(([0-9]{1,3}\\.){3}[0-9]{1,3}(:[0-9]{1,4})?))((/[a-zA-Z\\d_]+)*(\\?([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+&)*([a-zA-Z\\d_]+=[a-zA-Z\\d\\u4E00-\\u9FA5\\s\\+%#_-]+))?)?",@"naturalNum":@"\\d+(\\.\\d+)?"}]):nil;
 }
 
+-(void)setCustomLinkRegex:(NSString *)customLinkRegex
+{
+    if (![_customLinkRegex isEqualToString:customLinkRegex]) {
+        _customLinkRegex = customLinkRegex;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    }
+}
+
 -(void)setFrame:(CGRect)frame
 {
     if (!CGRectEqualToRect(self.frame, frame)) {
@@ -1326,24 +1336,26 @@ static CGFloat widthCallBacks(void * ref)
     return self.autoCheckLink?(_emailHighlightAttributes?_emailHighlightAttributes:DWDefaultHighlightAttributes):nil;
 }
 
--(void)setCustomLinkRegex:(NSString *)customLinkRegex
-{
-    if (![_customLinkRegex isEqualToString:customLinkRegex]) {
-        _customLinkRegex = customLinkRegex;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
-    }
-}
-
 -(void)setCustomLinkAttributes:(NSDictionary *)customLinkAttributes
 {
     _customLinkAttributes = customLinkAttributes;
     [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
 }
 
+-(NSDictionary *)customLinkAttributes
+{
+    return (self.customLinkRegex.length > 0)?(_customLinkAttributes?_customLinkAttributes:DWDefaultAttributes):nil;
+}
+
 -(void)setCustomLinkHighlightAttributes:(NSDictionary *)customLinkHighlightAttributes
 {
     _customLinkHighlightAttributes = customLinkHighlightAttributes;
     [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+}
+
+-(NSDictionary *)customLinkHighlightAttributes
+{
+    return (self.customLinkRegex.length > 0)?(_customLinkHighlightAttributes?_customLinkHighlightAttributes:DWDefaultHighlightAttributes):nil;
 }
 
 #pragma mark ---中间容器属性setter、getter---
