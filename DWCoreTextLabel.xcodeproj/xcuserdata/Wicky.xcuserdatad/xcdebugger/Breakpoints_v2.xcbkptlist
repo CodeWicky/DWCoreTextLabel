@@ -25,7 +25,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "719"
             endingLineNumber = "719"
-            landmarkName = "-enumerateCTRunInFrame:handler:"
+            landmarkName = "-getImageAcitvePathWithDrawPath:margin:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -41,7 +41,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "796"
             endingLineNumber = "796"
-            landmarkName = "-touchesBegan:withEvent:"
+            landmarkName = "-getDicWithPoint:arr:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -57,7 +57,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "395"
             endingLineNumber = "395"
-            landmarkName = "-handleAutoCheckWithLinkType:str:rangeSet:linkDic:attributeName:withImage:"
+            landmarkName = "-handleAutoCheckWithLinkType:str:linkRange:rangeSet:linkDic:attributeName:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
