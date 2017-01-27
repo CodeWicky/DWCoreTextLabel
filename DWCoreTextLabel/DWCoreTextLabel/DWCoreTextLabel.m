@@ -8,7 +8,196 @@
 
 #import "DWCoreTextLabel.h"
 #import <CoreText/CoreText.h>
+#import <libkern/OSAtomic.h>
+
+static dispatch_queue_t DWCoreTextLabelLayerGetDisplayQueue() {
+#define MAX_QUEUE_COUNT 16
+    static int queueCount;
+    static dispatch_queue_t queues[MAX_QUEUE_COUNT];
+    static dispatch_once_t onceToken;
+    static int32_t counter = 0;
+    dispatch_once(&onceToken, ^{
+        queueCount = (int)[NSProcessInfo processInfo].activeProcessorCount;
+        queueCount = queueCount < 1 ? 1 : queueCount > MAX_QUEUE_COUNT ? MAX_QUEUE_COUNT : queueCount;
+        if ([UIDevice currentDevice].systemVersion.floatValue >= 8.0) {
+            for (NSUInteger i = 0; i < queueCount; i++) {
+                dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0);
+                queues[i] = dispatch_queue_create("com.codeWicky.DWCoreTextLabel.render", attr);
+            }
+        } else {
+            for (NSUInteger i = 0; i < queueCount; i++) {
+                queues[i] = dispatch_queue_create("com.codeWicky.DWCoreTextLabel.render", DISPATCH_QUEUE_SERIAL);
+                dispatch_set_target_queue(queues[i], dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+            }
+        }
+    });
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    uint32_t cur = (uint32_t)OSAtomicIncrement32(&counter);
+#pragma clang diagnostic pop
+    return queues[(cur) % queueCount];
+#undef MAX_QUEUE_COUNT
+}
+
+static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
+    return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
+}
+
+@interface DWCoreTextLabelLayer : CALayer
+
+@property (atomic, readonly) int32_t signal;
+
+@property (nonatomic ,copy) void (^displayBlock)(CGContextRef context,BOOL(^isCanceled)());
+
+@property (nonatomic ,assign) BOOL displaysAsynchronously;
+
+@end
+
 static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
+
+@implementation DWCoreTextLabelLayer
+
+-(instancetype)init
+{
+    self = [super init];
+    if (self) {
+        static CGFloat scale; //global
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            scale = [UIScreen mainScreen].scale;
+        });
+        self.contentsScale = scale;
+        _signal = 0;
+        _displaysAsynchronously = YES;
+    }
+    return self;
+}
+
+-(void)signalIncrease
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    OSAtomicIncrement32(&_signal);
+#pragma clang diagnostic pop
+}
+
+-(void)setNeedsDisplay
+{
+    [self cancelPreviousDisplayCalculate];
+    [super setNeedsDisplay];
+}
+
+-(void)cancelPreviousDisplayCalculate
+{
+    [self signalIncrease];
+}
+
+-(void)dealloc
+{
+    [self cancelPreviousDisplayCalculate];
+}
+
+-(void)display
+{
+    super.contents = super.contents;
+    [self displayAsync:self.displaysAsynchronously];
+}
+
+-(void)displayAsync:(BOOL)async
+{
+    if (!self.displayBlock) {
+        self.contents = nil;
+        return;
+    }
+    if (async) {
+        int32_t signal = self.signal;
+        BOOL (^isCancelled)() = ^BOOL() {
+            return signal != self.signal;
+        };
+        CGSize size = self.bounds.size;
+        BOOL opaque = self.opaque;
+        CGFloat scale = self.contentsScale;
+        CGColorRef backgroundColor = (opaque && self.backgroundColor) ? CGColorRetain(self.backgroundColor) : NULL;
+        if (size.width < 1 || size.height < 1) {
+            CGImageRef image = (__bridge_retained CGImageRef)(self.contents);
+            self.contents = nil;
+            if (image) {
+                dispatch_async(DWCoreTextLabelLayerGetReleaseQueue(), ^{
+                    CFRelease(image);
+                });
+            }
+            CGColorRelease(backgroundColor);
+            return;
+        }
+        
+        dispatch_async(DWCoreTextLabelLayerGetDisplayQueue(), ^{
+            if (isCancelled()) {
+                CGColorRelease(backgroundColor);
+                return;
+            }
+            UIGraphicsBeginImageContextWithOptions(size, opaque, scale);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            if (opaque) {
+                CGContextSaveGState(context); {
+                    if (!backgroundColor || CGColorGetAlpha(backgroundColor) < 1) {
+                        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+                        CGContextAddRect(context, CGRectMake(0, 0, size.width * scale, size.height * scale));
+                        CGContextFillPath(context);
+                    }
+                    if (backgroundColor) {
+                        CGContextSetFillColorWithColor(context, backgroundColor);
+                        CGContextAddRect(context, CGRectMake(0, 0, size.width * scale, size.height * scale));
+                        CGContextFillPath(context);
+                    }
+                } CGContextRestoreGState(context);
+                CGColorRelease(backgroundColor);
+            }
+            self.displayBlock(context,isCancelled);
+            if (isCancelled()) {
+                UIGraphicsEndImageContext();
+                return;
+            }
+            UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            if (isCancelled()) {
+                return;
+            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (!isCancelled()) {
+                    self.contents = (__bridge id)(image.CGImage);
+                }
+            });
+        });
+    } else {
+        [self signalIncrease];
+        UIGraphicsBeginImageContextWithOptions(self.bounds.size, self.opaque, self.contentsScale);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        if (self.opaque) {
+            CGSize size = self.bounds.size;
+            size.width *= self.contentsScale;
+            size.height *= self.contentsScale;
+            CGContextSaveGState(context); {
+                if (!self.backgroundColor || CGColorGetAlpha(self.backgroundColor) < 1) {
+                    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+                    CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
+                    CGContextFillPath(context);
+                }
+                if (self.backgroundColor) {
+                    CGContextSetFillColorWithColor(context, self.backgroundColor);
+                    CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
+                    CGContextFillPath(context);
+                }
+            } CGContextRestoreGState(context);
+        }
+        self.displayBlock(context,^{return NO;});
+        UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        self.contents = (__bridge id)(image.CGImage);
+    }
+}
+
+@end
+
 @interface DWCoreTextLabel ()
 
 ///绘制文本
@@ -489,6 +678,91 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
 };
 
 #pragma mark ---绘制相关---
+///绘制富文本
+-(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)())isCanceled{
+    
+    CGContextSaveGState(context);
+    CGContextSetTextMatrix(context, CGAffineTransformIdentity);
+    CGContextTranslateCTM(context, 0, self.bounds.size.height);
+    CGContextScaleCTM(context, 1.0, -1.0);
+    
+    ///计算绘制尺寸限制
+    CGFloat limitWidth = (self.bounds.size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
+    CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
+    if (isCanceled()) return;
+    if (self.reCalculate || !self.mAStr) {
+        ///获取要绘制的文本
+        self.mAStr = getMAStr(self,limitWidth);
+    }
+    
+    if (isCanceled()) return;
+    ///已添加事件、链接的集合
+    NSMutableSet * rangeSet = [NSMutableSet set];
+    ///添加活跃文本属性方法
+    [self handleActiveTextWithStr:self.mAStr rangeSet:rangeSet withImage:!self.reCalculate];
+    
+    if (isCanceled()) return;
+    ///处理插入图片
+    if (self.reCalculate) {
+        NSMutableArray * arrInsert = [NSMutableArray array];
+        [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+            if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
+                [arrInsert addObject:dic];
+            }
+        }];
+        ///富文本插入图片占位符
+        [self handleStr:self.mAStr withInsertImageArr:arrInsert];
+    }
+    
+    if (isCanceled()) return;
+    ///计算drawFrame及drawPath
+    if (self.reCalculate) {
+        [self handleDrawFrameAndPathWithLimitWidth:limitWidth limitHeight:limitHeight];
+    }
+    
+    if (isCanceled()) return;
+    ///处理文本高亮状态并获取可见绘制文本范围
+    NSRange visibleRange = [self handleStringHighlightAttributesWithRangeSet:rangeSet];
+    
+    if (isCanceled()) return;
+    ///绘制的工厂
+    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
+    CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, NULL);
+    
+    if (isCanceled()){
+        CFRelease(visibleFrame);
+        CFRelease(frameSetter);
+        return;
+    }
+    if (self.reCalculate) {
+        ///计算活跃文本及插入图片的frame
+        [self handleFrameForActiveTextAndInsertImageWithCTFrame:visibleFrame];
+    }
+    
+    if (isCanceled()){
+        CFRelease(visibleFrame);
+        CFRelease(frameSetter);
+        return;
+    }
+    ///绘制图片
+    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIImage * image = dic[@"image"];
+        CGRect frame = convertRect([dic[@"frame"] CGRectValue],self.bounds.size.height);
+        CGContextDrawImage(context, frame, image.CGImage);
+    }];
+    
+    self.reCalculate = NO;
+    self.reCheck = NO;
+    self.finishFirstDraw = YES;
+    ///绘制上下文
+    CTFrameDraw(visibleFrame, context);
+    
+    ///内存管理
+    CFRelease(visibleFrame);
+    CFRelease(frameSetter);
+    
+    CGContextRestoreGState(context);
+}
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
                                reCheck:(BOOL)reCheck
@@ -1000,6 +1274,11 @@ static CGFloat widthCallBacks(void * ref)
 
 #pragma mark ---method override---
 
++(Class)layerClass
+{
+    return [DWCoreTextLabelLayer class];
+}
+
 -(instancetype)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
@@ -1009,77 +1288,19 @@ static CGFloat widthCallBacks(void * ref)
         _reCalculate = YES;
         _reCheck = YES;
         self.backgroundColor = [UIColor clearColor];
+        DWCoreTextLabelLayer * layer = (DWCoreTextLabelLayer *)self.layer;
+        __weak typeof(self)weakSelf = self;
+        layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
+            [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
+        };
     }
     return self;
 }
 
-- (void)drawRect:(CGRect)rect {
-    [super drawRect:rect];
-    
-    ///坐标系处理
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetTextMatrix(context, CGAffineTransformIdentity);
-    CGContextTranslateCTM(context, 0, self.bounds.size.height);
-    CGContextScaleCTM(context, 1.0, -1.0);
-    
-    ///计算绘制尺寸限制
-    CGFloat limitWidth = (self.bounds.size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
-    CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
-    if (self.reCalculate || !self.mAStr) {
-        ///获取要绘制的文本
-        self.mAStr = getMAStr(self,limitWidth);
-    }
-    
-    ///已添加事件、链接的集合
-    NSMutableSet * rangeSet = [NSMutableSet set];
-    ///添加活跃文本属性方法
-    [self handleActiveTextWithStr:self.mAStr rangeSet:rangeSet withImage:!self.reCalculate];
-    
-    ///处理插入图片
-    if (self.reCalculate) {
-        NSMutableArray * arrInsert = [NSMutableArray array];
-        [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-            if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
-                [arrInsert addObject:dic];
-            }
-        }];
-        ///富文本插入图片占位符
-        [self handleStr:self.mAStr withInsertImageArr:arrInsert];
-    }
-    
-    ///计算drawFrame及drawPath
-    if (self.reCalculate) {
-        [self handleDrawFrameAndPathWithLimitWidth:limitWidth limitHeight:limitHeight];
-    }
-
-    ///处理文本高亮状态并获取可见绘制文本范围
-    NSRange visibleRange = [self handleStringHighlightAttributesWithRangeSet:rangeSet];
-    
-    ///绘制的工厂
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
-    CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, NULL);
-    
-    if (self.reCalculate) {
-        ///计算活跃文本及插入图片的frame
-        [self handleFrameForActiveTextAndInsertImageWithCTFrame:visibleFrame];
-    }
-
-    ///绘制图片
-    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        UIImage * image = dic[@"image"];
-        CGRect frame = convertRect([dic[@"frame"] CGRectValue],self.bounds.size.height);
-        CGContextDrawImage(context, frame, image.CGImage);
-    }];
-    
-    self.reCalculate = NO;
-    self.reCheck = NO;
-    self.finishFirstDraw = YES;
-    ///绘制上下文
-    CTFrameDraw(visibleFrame, context);
-    
-    ///内存管理
-    CFRelease(visibleFrame);
-    CFRelease(frameSetter);
+-(void)setNeedsDisplay
+{
+    [super setNeedsDisplay];
+    [self.layer setNeedsDisplay];
 }
 
 -(void)sizeToFit
