@@ -1154,6 +1154,7 @@ static CGFloat widthCallBacks(void * ref)
         _reCheck = YES;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
+        layer.contentsScale = [UIScreen mainScreen].scale;
         __weak typeof(self)weakSelf = self;
         layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
@@ -1161,6 +1162,15 @@ static CGFloat widthCallBacks(void * ref)
     }
     return self;
 }
+
+//-(void)drawRect:(CGRect)rect
+//{
+//    [super drawRect:rect];
+//    CGContextRef context = UIGraphicsGetCurrentContext();
+//    [self drawTheTextWithContext:context isCanceled:^BOOL{
+//        return NO;
+//    }];
+//}
 
 -(void)setNeedsDisplay
 {

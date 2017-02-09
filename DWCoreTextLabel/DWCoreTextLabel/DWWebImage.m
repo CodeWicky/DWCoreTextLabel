@@ -404,6 +404,7 @@ static DWWebImageManager * mgr = nil;
     key = transferKey(key, self.useSecureKey);
     obj = [self.memCache objectForKey:key];
     if (!obj) {
+        NSAssert((self.cacheType != DWWebImageCacheTypeUndefined), @"you must set a cacheType but not DWWebImageCacheTypeUndefined");
         readFileWithKey(key, self.cacheType, self.semaphore, self.cacheSpace,^(id object) {
             obj = object;
         });

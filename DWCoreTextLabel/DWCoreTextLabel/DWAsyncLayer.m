@@ -54,12 +54,6 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
 {
     self = [super init];
     if (self) {
-        static CGFloat scale;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            scale = [UIScreen mainScreen].scale;
-        });
-        self.contentsScale = scale;
         _signal = 0;
         _displaysAsynchronously = YES;
     }
