@@ -9,6 +9,7 @@
 #import "DWCoreTextLabel.h"
 #import <CoreText/CoreText.h>
 #import "DWAsyncLayer.h"
+#import "DWWebImage.h"
 
 @interface DWCoreTextLabel ()
 
@@ -95,24 +96,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 #pragma mark ---接口方法---
 
-///在字符串指定位置插入图片
--(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector
-{
-    if (!image) {
-        return;
-    }
-    if (padding != 0) {
-        size = CGSizeMake(size.width + padding * 2, size.height);
-    }
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"padding":@(padding),@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
-    if (target && selector) {
-        [dic setValue:target forKey:@"target"];
-        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
-    }
-    [self.imageArr addObject:dic];
-    [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
-}
-
 ///以指定模式绘制图片
 -(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
 {
@@ -132,6 +115,13 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }
     [self.imageArr addObject:dic];
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+}
+
+-(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+{
+    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
+        [self dw_DrawImage:image atFrame:frame margin:margin drawMode:mode target:target selector:selector];
+    }];
 }
 
 ///以路径绘制图片
@@ -155,6 +145,38 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }
     [self.imageArr addObject:dic];
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+}
+
+-(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector
+{
+    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
+        [self dw_DrawImage:image WithPath:path margin:margin drawMode:mode target:target selector:selector];
+    }];
+}
+
+///在字符串指定位置插入图片
+-(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector
+{
+    if (!image) {
+        return;
+    }
+    if (padding != 0) {
+        size = CGSizeMake(size.width + padding * 2, size.height);
+    }
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"padding":@(padding),@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
+    if (target && selector) {
+        [dic setValue:target forKey:@"target"];
+        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    [self.imageArr addObject:dic];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+}
+
+-(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector
+{
+    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
+        [self dw_InsertImage:image size:size padding:padding descent:descent atLocation:location target:target selector:selector];
+    }];
 }
 
 ///给指定范围添加响应事件
@@ -222,6 +244,14 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     UIGraphicsEndImageContext();
     
     return newImage;
+}
+
++(void)dw_ClipImageWithUrl:(NSString *)url withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode completion:(void(^)(UIImage * image))completion
+{
+    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
+        image = [DWCoreTextLabel dw_ClipImage:image withPath:path mode:mode];
+        completion(image);
+    }];
 }
 
 #pragma mark ---插入图片相关---
@@ -589,15 +619,24 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     
     CGContextRestoreGState(context);
 }
+
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
                                reCheck:(BOOL)reCheck
+{
+    [self handleAutoRedrawWithRecalculate:reCalculate reCheck:reCheck reDraw:YES];
+}
+
+///按需重绘
+-(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate
+                               reCheck:(BOOL)reCheck
+                                reDraw:(BOOL)reDraw
 {
     if (self.finishFirstDraw) {
         self.reCalculate = reCalculate;
         self.reCheck = reCheck;
     }
-    if (self.autoRedraw) {
+    if (reDraw) {
         [self setNeedsDisplay];
     }
 }
@@ -643,7 +682,7 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     [self.autoLinkArr removeAllObjects];
     [self.textRangeArr removeAllObjects];
     [self.arrLocationImgHasAdd removeAllObjects];
-    [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
 }
 
 ///处理图片环绕数组，绘制前调用
@@ -1172,7 +1211,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if ((self.exclusionPaths.count == 0) && (_textAlignment != textAlignment)) {
         _textAlignment = textAlignment;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1180,7 +1219,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if ((self.exclusionPaths.count == 0) && (_textVerticalAlignment != textVerticalAlignment)) {
         _textVerticalAlignment = textVerticalAlignment;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1195,14 +1234,14 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setFont:(UIFont *)font
 {
     _font = font;
-    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setTextInsets:(UIEdgeInsets)textInsets
 {
     if (!UIEdgeInsetsEqualToEdgeInsets(_textInsets, textInsets)) {
         _textInsets = textInsets;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1218,7 +1257,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if (!CGColorEqualToColor(_textColor.CGColor,textColor.CGColor)) {
         _textColor = textColor;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1234,7 +1273,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if (_lineSpacing != lineSpacing) {
         _lineSpacing = lineSpacing;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1257,14 +1296,14 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setExclusionPaths:(NSMutableArray<UIBezierPath *> *)exclusionPaths
 {
     _exclusionPaths = exclusionPaths;
-    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setNumberOfLines:(NSUInteger)numberOfLines
 {
     if (_numberOfLines != numberOfLines) {
         _numberOfLines = numberOfLines;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1272,7 +1311,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if (_lineBreakMode != lineBreakMode) {
         _lineBreakMode = lineBreakMode;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
     }
 }
 
@@ -1290,7 +1329,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _autoCheckConfig = autoCheckConfig;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
     }
 }
 
@@ -1303,7 +1342,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if (![_customLinkRegex isEqualToString:customLinkRegex]) {
         _customLinkRegex = customLinkRegex;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
     }
 }
 
@@ -1311,7 +1350,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     if (!CGRectEqualToRect(self.frame, frame)) {
         [super setFrame:frame];
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1319,20 +1358,20 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes
 {
     _activeTextAttributes = activeTextAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setActiveTextHighlightAttributes:(NSDictionary *)activeTextHighlightAttributes
 {
     _activeTextHighlightAttributes = activeTextHighlightAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setNaturalNumAttributes:(NSDictionary *)naturalNumAttributes
 {
     _naturalNumAttributes = naturalNumAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1345,7 +1384,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _naturalNumHighlightAttributes = naturalNumHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1358,7 +1397,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _phoneNoAttributes = phoneNoAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1371,7 +1410,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _phoneNoHighlightAttributes = phoneNoHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1384,7 +1423,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _URLAttributes = URLAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1397,7 +1436,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _URLHighlightAttributes = URLHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1411,7 +1450,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _emailAttributes = emailAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1424,7 +1463,7 @@ static CGFloat widthCallBacks(void * ref)
 {
     _emailHighlightAttributes = emailHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1436,7 +1475,7 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setCustomLinkAttributes:(NSDictionary *)customLinkAttributes
 {
     _customLinkAttributes = customLinkAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(NSDictionary *)customLinkAttributes
@@ -1447,7 +1486,7 @@ static CGFloat widthCallBacks(void * ref)
 -(void)setCustomLinkHighlightAttributes:(NSDictionary *)customLinkHighlightAttributes
 {
     _customLinkHighlightAttributes = customLinkHighlightAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO];
+    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(NSDictionary *)customLinkHighlightAttributes

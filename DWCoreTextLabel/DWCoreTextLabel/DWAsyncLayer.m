@@ -42,13 +42,19 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
     return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
 }
 
+@interface DWAsyncLayer ()
+
+@property (atomic, readonly) int32_t signal;
+
+@end
+
 @implementation DWAsyncLayer
 
 -(instancetype)init
 {
     self = [super init];
     if (self) {
-        static CGFloat scale; //global
+        static CGFloat scale;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             scale = [UIScreen mainScreen].scale;

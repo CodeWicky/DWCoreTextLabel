@@ -106,6 +106,9 @@
  
  version 1.1.4
  事务管理类去除，异步绘制文件抽出
+ 
+ version 1.1.5
+ 添加网络图片现在库，支持绘制网络图片。
  */
 
 #import <UIKit/UIKit.h>
@@ -302,6 +305,11 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 -(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
+ 以frame绘制矩形网络图片，参数释义同上
+ */
+-(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+
+/**
  以path绘制不规则形状图片
  
  image      将要绘制的图片
@@ -318,6 +326,11 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  3.自动剪裁图片时按照path的形状剪裁，与origin无关。
  */
 -(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+
+/**
+ 以path绘制不规则图形网络图片，参数释义同上
+ */
+-(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
@@ -337,6 +350,11 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 -(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
 /**
+ 插入网络图片，参数释义同上
+ */
+-(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+
+/**
  为指定区域文本添加点击事件
  */
 -(void)dw_AddTarget:(id)target selector:(SEL)selector toRange:(NSRange)range;
@@ -345,5 +363,10 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  返回指定形状的image对象
  */
 +(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode;
+
+/**
+ 下载图片并剪裁
+ */
++(void)dw_ClipImageWithUrl:(NSString *)url withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode completion:(void(^)(UIImage * image))completion;
 @end
 

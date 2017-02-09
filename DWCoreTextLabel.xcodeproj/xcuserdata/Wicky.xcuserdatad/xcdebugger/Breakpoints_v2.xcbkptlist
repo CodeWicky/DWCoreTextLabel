@@ -20,11 +20,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "505461984.555966"
+            timestampString = "508331485.432623"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "719"
-            endingLineNumber = "719"
+            startingLineNumber = "575"
+            endingLineNumber = "575"
             landmarkName = "-drawTheTextWithContext:isCanceled:"
             landmarkType = "7">
          </BreakpointContent>
@@ -36,28 +36,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "505461984.555966"
+            timestampString = "508331557.818885"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "796"
-            endingLineNumber = "796"
-            landmarkName = "-handleDrawFrameAndPathWithLimitWidth:limitHeight:"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "505461359.415869"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "395"
-            endingLineNumber = "395"
-            landmarkName = "+dw_ClipImage:withPath:mode:"
+            startingLineNumber = "153"
+            endingLineNumber = "153"
+            landmarkName = "-dw_DrawImageWithUrl:WithPath:margin:drawMode:target:selector:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

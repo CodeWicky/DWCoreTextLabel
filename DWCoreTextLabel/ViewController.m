@@ -42,7 +42,7 @@
     [path addLineToPoint:CGPointMake(self.view.center.x, 675)];
     [path addLineToPoint:CGPointMake(self.view.center.x + 50, 625)];
     [path closePath];
-    [label dw_DrawImage:[UIImage imageNamed:@"oldDriver"] WithPath:path margin:5 drawMode:(DWTextImageDrawModeSurround) target:nil selector:nil];
+    [label dw_DrawImageWithUrl:@"http://static.firefoxchina.cn/img/201702/8_589bc06838fd70.jpg" WithPath:path margin:5 drawMode:(DWTextImageDrawModeSurround) target:nil selector:nil];
 }
 
 -(void)coreTextLabel:(DWCoreTextLabel *)label didSelectLink:(NSString *)link range:(NSRange)range linkType:(DWLinkType)linkType

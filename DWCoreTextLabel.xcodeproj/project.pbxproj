@@ -19,6 +19,7 @@
 		9BA02F5F1DF44C2000AB9565 /* DWCoreTextLabelUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F5E1DF44C2000AB9565 /* DWCoreTextLabelUITests.m */; };
 		9BA02F721DF48E8A00AB9565 /* DWCoreTextLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */; };
 		9BABFD7B1E4C7C2D0089042B /* DWAsyncLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */; };
+		9BABFD811E4C84AE0089042B /* DWWebImage.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BABFD801E4C84AE0089042B /* DWWebImage.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +62,8 @@
 		9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWCoreTextLabel.m; sourceTree = "<group>"; };
 		9BABFD791E4C7C2D0089042B /* DWAsyncLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWAsyncLayer.h; sourceTree = "<group>"; };
 		9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWAsyncLayer.m; sourceTree = "<group>"; };
+		9BABFD7F1E4C84AE0089042B /* DWWebImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWWebImage.h; sourceTree = "<group>"; };
+		9BABFD801E4C84AE0089042B /* DWWebImage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWWebImage.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +163,8 @@
 				9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */,
 				9BABFD791E4C7C2D0089042B /* DWAsyncLayer.h */,
 				9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */,
+				9BABFD7F1E4C84AE0089042B /* DWWebImage.h */,
+				9BABFD801E4C84AE0089042B /* DWWebImage.m */,
 			);
 			path = DWCoreTextLabel;
 			sourceTree = "<group>";
@@ -305,6 +310,7 @@
 				9BA02F721DF48E8A00AB9565 /* DWCoreTextLabel.m in Sources */,
 				9BA02F3E1DF44C2000AB9565 /* AppDelegate.m in Sources */,
 				9BA02F3B1DF44C2000AB9565 /* main.m in Sources */,
+				9BABFD811E4C84AE0089042B /* DWWebImage.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

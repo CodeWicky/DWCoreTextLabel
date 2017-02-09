@@ -6,12 +6,16 @@
 //  Copyright © 2017年 Wicky. All rights reserved.
 //
 
+/**
+ 图层异步绘制类
+ 
+ 提供图层的异步绘制，线程安全。
+ */
+
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
 
 @interface DWAsyncLayer : CALayer
-
-@property (atomic, readonly) int32_t signal;
 
 @property (nonatomic ,copy) void (^displayBlock)(CGContextRef context,BOOL(^isCanceled)());
 
