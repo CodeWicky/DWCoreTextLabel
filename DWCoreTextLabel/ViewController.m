@@ -28,8 +28,8 @@
     label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(10, 10, 120, 120)]].mutableCopy;
     [label dw_InsertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(414 - 50 - 20, 170) padding:25 descent:0 atLocation:91 target:self selector:@selector(clickPic)];
     [label dw_DrawImage:[UIImage imageNamed:@"oldDriver"] WithPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(10,10, 120, 120)] margin:5 drawMode:(DWTextImageDrawModeCover) target:self selector:@selector(clickHeader)];
-//    [label dw_AddTarget:self selector:@selector(clickLink) toRange:NSMakeRange(126, 57)];
-//    [label dw_AddTarget:self selector:@selector(clickBlog) toRange:NSMakeRange(191, 28)];
+    [label dw_AddTarget:self selector:@selector(clickLink) toRange:NSMakeRange(126, 57)];
+    [label dw_AddTarget:self selector:@selector(clickBlog) toRange:NSMakeRange(191, 28)];
     label.delegate = self;
     label.autoCheckLink = YES;
     NSDictionary * dic = @{NSForegroundColorAttributeName:[UIColor redColor]};
@@ -43,6 +43,7 @@
     [path addLineToPoint:CGPointMake(self.view.center.x + 50, 625)];
     [path closePath];
     [label dw_DrawImageWithUrl:@"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1486655338141&di=f457d61d52460455bd37430fe77b5cf4&imgtype=0&src=http%3A%2F%2Fimgsrc.baidu.com%2Fforum%2Fpic%2Fitem%2F4c8e31a03bb6ec2cf31fe7b4.jpg" WithPath:path margin:5 drawMode:(DWTextImageDrawModeSurround) target:nil selector:nil];
+    
 }
 
 -(void)coreTextLabel:(DWCoreTextLabel *)label didSelectLink:(NSString *)link range:(NSRange)range linkType:(DWLinkType)linkType
@@ -64,11 +65,11 @@
 {
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://www.jianshu.com/users/a56ec10f6603/latest_articles"]];
 }
-//
-//-(void)clickBlog
-//{
-//    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/CodeWicky"]];
-//}
+
+-(void)clickBlog
+{
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/CodeWicky"]];
+}
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.

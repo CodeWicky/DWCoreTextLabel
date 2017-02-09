@@ -10,6 +10,9 @@
  图层异步绘制类
  
  提供图层的异步绘制，线程安全。
+ 
+ version 1.0.0
+ 提供异步绘制
  */
 
 #import <QuartzCore/QuartzCore.h>

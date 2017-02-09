@@ -125,18 +125,7 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
             UIGraphicsBeginImageContextWithOptions(size, opaque, scale);
             CGContextRef context = UIGraphicsGetCurrentContext();
             if (opaque) {
-                CGContextSaveGState(context); {
-                    if (!backgroundColor || CGColorGetAlpha(backgroundColor) < 1) {
-                        CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-                        CGContextAddRect(context, CGRectMake(0, 0, size.width * scale, size.height * scale));
-                        CGContextFillPath(context);
-                    }
-                    if (backgroundColor) {
-                        CGContextSetFillColorWithColor(context, backgroundColor);
-                        CGContextAddRect(context, CGRectMake(0, 0, size.width * scale, size.height * scale));
-                        CGContextFillPath(context);
-                    }
-                } CGContextRestoreGState(context);
+                fillContextWithColor(context, backgroundColor, size);
                 CGColorRelease(backgroundColor);
             }
             self.displayBlock(context,isCancelled);
@@ -163,18 +152,7 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
             CGSize size = self.bounds.size;
             size.width *= self.contentsScale;
             size.height *= self.contentsScale;
-            CGContextSaveGState(context); {
-                if (!self.backgroundColor || CGColorGetAlpha(self.backgroundColor) < 1) {
-                    CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-                    CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
-                    CGContextFillPath(context);
-                }
-                if (self.backgroundColor) {
-                    CGContextSetFillColorWithColor(context, self.backgroundColor);
-                    CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
-                    CGContextFillPath(context);
-                }
-            } CGContextRestoreGState(context);
+            fillContextWithColor(context, self.backgroundColor,size);
         }
         self.displayBlock(context,^{return NO;});
         UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
@@ -182,5 +160,20 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
         self.contents = (__bridge id)(image.CGImage);
     }
 }
+
+static inline void fillContextWithColor(CGContextRef context,CGColorRef color,CGSize size){
+    CGContextSaveGState(context); {
+        if (!color || CGColorGetAlpha(color) < 1) {
+            CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+            CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
+            CGContextFillPath(context);
+        }
+        if (color) {
+            CGContextSetFillColorWithColor(context, color);
+            CGContextAddRect(context, CGRectMake(0, 0, size.width, size.height));
+            CGContextFillPath(context);
+        }
+    } CGContextRestoreGState(context);
+};
 
 @end
