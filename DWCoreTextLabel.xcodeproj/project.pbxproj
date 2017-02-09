@@ -18,6 +18,7 @@
 		9BA02F541DF44C2000AB9565 /* DWCoreTextLabelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F531DF44C2000AB9565 /* DWCoreTextLabelTests.m */; };
 		9BA02F5F1DF44C2000AB9565 /* DWCoreTextLabelUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F5E1DF44C2000AB9565 /* DWCoreTextLabelUITests.m */; };
 		9BA02F721DF48E8A00AB9565 /* DWCoreTextLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */; };
+		9BABFD7B1E4C7C2D0089042B /* DWAsyncLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +59,8 @@
 		9BA02F601DF44C2000AB9565 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9BA02F701DF48E8A00AB9565 /* DWCoreTextLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWCoreTextLabel.h; sourceTree = "<group>"; };
 		9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWCoreTextLabel.m; sourceTree = "<group>"; };
+		9BABFD791E4C7C2D0089042B /* DWAsyncLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWAsyncLayer.h; sourceTree = "<group>"; };
+		9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWAsyncLayer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -155,6 +158,8 @@
 			children = (
 				9BA02F701DF48E8A00AB9565 /* DWCoreTextLabel.h */,
 				9BA02F711DF48E8A00AB9565 /* DWCoreTextLabel.m */,
+				9BABFD791E4C7C2D0089042B /* DWAsyncLayer.h */,
+				9BABFD7A1E4C7C2D0089042B /* DWAsyncLayer.m */,
 			);
 			path = DWCoreTextLabel;
 			sourceTree = "<group>";
@@ -295,6 +300,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9BABFD7B1E4C7C2D0089042B /* DWAsyncLayer.m in Sources */,
 				9BA02F411DF44C2000AB9565 /* ViewController.m in Sources */,
 				9BA02F721DF48E8A00AB9565 /* DWCoreTextLabel.m in Sources */,
 				9BA02F3E1DF44C2000AB9565 /* AppDelegate.m in Sources */,

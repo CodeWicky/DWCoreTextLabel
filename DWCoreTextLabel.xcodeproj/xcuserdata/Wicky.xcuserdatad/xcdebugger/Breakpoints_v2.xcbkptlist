@@ -25,8 +25,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "719"
             endingLineNumber = "719"
-            landmarkName = "getSuggestSize()"
-            landmarkType = "9">
+            landmarkName = "-drawTheTextWithContext:isCanceled:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -41,8 +41,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "796"
             endingLineNumber = "796"
-            landmarkName = "getCTRunBounds()"
-            landmarkType = "9">
+            landmarkName = "-handleDrawFrameAndPathWithLimitWidth:limitHeight:"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -57,7 +57,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "395"
             endingLineNumber = "395"
-            landmarkName = "-handleAutoCheckWithLinkType:str:linkRange:rangeSet:linkDic:attributeName:"
+            landmarkName = "+dw_ClipImage:withPath:mode:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
