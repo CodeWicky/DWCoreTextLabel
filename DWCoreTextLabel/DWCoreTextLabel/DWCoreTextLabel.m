@@ -1163,15 +1163,6 @@ static CGFloat widthCallBacks(void * ref)
     return self;
 }
 
-//-(void)drawRect:(CGRect)rect
-//{
-//    [super drawRect:rect];
-//    CGContextRef context = UIGraphicsGetCurrentContext();
-//    [self drawTheTextWithContext:context isCanceled:^BOOL{
-//        return NO;
-//    }];
-//}
-
 -(void)setNeedsDisplay
 {
     [super setNeedsDisplay];

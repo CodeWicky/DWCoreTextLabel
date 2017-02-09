@@ -110,6 +110,8 @@
  version 1.1.5
  添加网络图片现在库，支持绘制网络图片。
  
+ version 1.1.6
+ 修复layer.contentScale引起的模糊问题
  */
 
 #import <UIKit/UIKit.h>
