@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
 s.name = 'DWCoreTextLabel'
 s.version = '1.0.0'
 s.license = { :type => 'MIT', :file => 'LICENSE' }
-s.summary = 'It's a Label based on coreText,help you to layout of the collocation of illustration and character.基于coreText的Label控件，帮助你做图文混排。'
+s.summary = 'It is a Label based on coreText,help you to layout of the collocation of illustration and character.基于coreText的Label控件，帮助你做图文混排。'
 s.homepage = 'https://github.com/CodeWicky/DWCoreTextLabel'
 s.authors = { 'codeWicky' => 'codewicky@163.com' }
 s.social_media_url = 'http://www.jianshu.com/u/a56ec10f6603'
