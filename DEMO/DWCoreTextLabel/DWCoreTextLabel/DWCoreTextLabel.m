@@ -11,6 +11,13 @@
 #import "DWAsyncLayer.h"
 #import "DWWebImage.h"
 
+#define CFSAFERELEASE(a)\
+do {\
+if(a != NULL) {\
+CFRelease(a);\
+}\
+} while(0)
+
 @interface DWCoreTextLabel ()
 
 ///绘制文本
@@ -280,7 +287,7 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
     NSString * placeHolderStr = [NSString stringWithCharacters:&placeHolder length:1];
     NSMutableAttributedString * placeHolderAttrStr = [[NSMutableAttributedString alloc] initWithString:placeHolderStr];
     CFAttributedStringSetAttribute((CFMutableAttributedStringRef)placeHolderAttrStr, CFRangeMake(0, 1), kCTRunDelegateAttributeName, delegate);
-    CFRelease(delegate);
+    CFSAFERELEASE(delegate);
     NSInteger offset = getInsertOffset(label,location);
     [str insertAttributedString:placeHolderAttrStr atIndex:location + offset];
 }
@@ -586,8 +593,8 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, NULL);
     
     if (isCanceled()){
-        CFRelease(visibleFrame);
-        CFRelease(frameSetter);
+        CFSAFERELEASE(visibleFrame);
+        CFSAFERELEASE(frameSetter);
         return;
     }
     if (self.reCalculate) {
@@ -596,8 +603,8 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     }
     
     if (isCanceled()){
-        CFRelease(visibleFrame);
-        CFRelease(frameSetter);
+        CFSAFERELEASE(visibleFrame);
+        CFSAFERELEASE(frameSetter);
         return;
     }
     ///绘制图片
@@ -614,8 +621,8 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     CTFrameDraw(visibleFrame, context);
     
     ///内存管理
-    CFRelease(visibleFrame);
-    CFRelease(frameSetter);
+    CFSAFERELEASE(visibleFrame);
+    CFSAFERELEASE(frameSetter);
     
     CGContextRestoreGState(context);
 }
@@ -648,7 +655,7 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
     ///生成绘制尺寸
     CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines);
-    CFRelease(frameSetter);
+    CFSAFERELEASE(frameSetter);
     self.suggestSize = CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
     CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
     
@@ -823,7 +830,7 @@ static inline NSMutableAttributedString * getMAStr(DWCoreTextLabel * label,CGFlo
     NSMutableParagraphStyle * newPara = [paragraphStyle mutableCopy];
     newPara.lineBreakMode = NSLineBreakByTruncatingTail;
     [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
-    CFRelease(frameSetter);
+    CFSAFERELEASE(frameSetter);
     return mAStr;
 }
 
@@ -867,8 +874,8 @@ static inline NSRange getRangeToDrawForVisibleString(DWCoreTextLabel * label)
     CTFramesetterRef tempFrameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)label.mAStr);
     CTFrameRef tempFrame = CTFramesetterCreateFrame(tempFrameSetter, CFRangeMake(0, label.mAStr.length), label.drawPath.CGPath, NULL);
     CFRange range = CTFrameGetVisibleStringRange(tempFrame);
-    CFRelease(tempFrame);
-    CFRelease(tempFrameSetter);
+    CFSAFERELEASE(tempFrame);
+    CFSAFERELEASE(tempFrameSetter);
     return NSMakeRange(range.location, range.length);
 }
 
@@ -897,8 +904,8 @@ static inline CFRange getLastLineRange(CTFramesetterRef frameSetter,CGFloat limi
             CTLineRef line = CFArrayGetValueAtIndex(lines, lineNum - 1);
             range = CTLineGetStringRange(line);
         }
-        CFRelease(path);
-        CFRelease(frame);
+        CFSAFERELEASE(path);
+        CFSAFERELEASE(frame);
     }
     return range;
 }
@@ -1195,7 +1202,7 @@ static CGFloat widthCallBacks(void * ref)
     
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
     CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines);
-    CFRelease(frameSetter);
+    CFSAFERELEASE(frameSetter);
     return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
 }
 
