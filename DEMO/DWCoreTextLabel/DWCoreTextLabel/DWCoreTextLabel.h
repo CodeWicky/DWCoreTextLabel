@@ -112,6 +112,10 @@
  
  version 1.1.6
  修复layer.contentScale引起的模糊问题
+ 
+ version 1.1.7
+ 网络图片绘制api改变，添加占位图接口
+ 日后关注562行代码前后（暂修复562行前后mAStr地址发生改变问题，若再次复现，追踪562）
  */
 
 #import <UIKit/UIKit.h>
@@ -313,6 +317,13 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 -(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
+ 以frame绘制矩形网络图片，参数释义同上
+ 
+ 注：下载未完成时以占位图占位，即绘制区域被保留，以下网络图片绘制且有占位图API中逻辑相同
+ */
+-(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+
+/**
  以path绘制不规则形状图片
  
  image      将要绘制的图片
@@ -334,6 +345,10 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  以path绘制不规则图形网络图片，参数释义同上
  */
 -(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+/**
+ 以path绘制不规则图形网络图片，参数释义同上
+ */
+-(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
@@ -356,6 +371,12 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  插入网络图片，参数释义同上
  */
 -(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+
+
+/**
+ 插入网络图片，参数释义同上
+ */
+-(void)dw_InsertImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
 /**
  为指定区域文本添加点击事件
