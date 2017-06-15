@@ -42,7 +42,6 @@
     [path addLineToPoint:CGPointMake(self.view.center.x, 675)];
     [path addLineToPoint:CGPointMake(self.view.center.x + 50, 625)];
     [path closePath];
-    [label dw_DrawImageWithUrl:@"http://upload-images.jianshu.io/upload_images/1835430-deee60e266a22d65.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" WithPath:path margin:5 drawMode:(DWTextImageDrawModeSurround) target:nil selector:nil];
     [label dw_DrawImageWithUrl:@"https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1486655338141&di=f457d61d52460455bd37430fe77b5cf4&imgtype=0&src=http%3A%2F%2Fimgsrc.baidu.com%2Fforum%2Fpic%2Fitem%2F4c8e31a03bb6ec2cf31fe7b4.jpg" placeHolder:nil WithPath:path margin:5 drawMode:(DWTextImageDrawModeSurround) target:nil selector:nil];
     
 }

@@ -18,6 +18,14 @@ CFRelease(a);\
 }\
 } while(0)
 
+#define DRAWCANCELED \
+{\
+if (isCanceled()) {\
+self.isDrawing = NO;\
+return;\
+}\
+}
+
 @interface DWCoreTextLabel ()
 
 ///绘制文本
@@ -82,6 +90,9 @@ CFRelease(a);\
 
 ///重新自动检测
 @property (nonatomic ,assign) BOOL reCheck;
+
+///正在绘制（加锁）
+@property (nonatomic ,assign) BOOL isDrawing;
 
 @end
 
@@ -545,6 +556,7 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
 };
 
 #pragma mark ---绘制相关---
+
 ///绘制富文本
 -(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)())isCanceled{
     
@@ -556,19 +568,20 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     ///计算绘制尺寸限制
     CGFloat limitWidth = (self.bounds.size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
     CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
-    if (isCanceled()) return;
+    
+    DRAWCANCELED
     if (self.reCalculate || !self.mAStr) {
         ///获取要绘制的文本
         self.mAStr = getMAStr(self,limitWidth);
     }
     
-    if (isCanceled()) return;
+    DRAWCANCELED
     ///已添加事件、链接的集合
     NSMutableSet * rangeSet = [NSMutableSet set];
     ///添加活跃文本属性方法
     [self handleActiveTextWithStr:self.mAStr rangeSet:rangeSet withImage:!self.reCalculate];
-
-    if (isCanceled()) return;
+    
+    DRAWCANCELED
     ///处理插入图片
     if (self.reCalculate) {
         NSMutableArray * arrInsert = [NSMutableArray array];
@@ -581,21 +594,23 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
         [self handleStr:self.mAStr withInsertImageArr:arrInsert];
     }
     
-    if (isCanceled()) return;
+    DRAWCANCELED
     ///计算drawFrame及drawPath
     if (self.reCalculate) {
         [self handleDrawFrameAndPathWithLimitWidth:limitWidth limitHeight:limitHeight];
     }
     
-    if (isCanceled()) return;
+    DRAWCANCELED
     ///处理文本高亮状态并获取可见绘制文本范围
     NSRange visibleRange = [self handleStringHighlightAttributesWithRangeSet:rangeSet];
-    if (isCanceled()) return;
+    
+    DRAWCANCELED
     ///绘制的工厂
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
     CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, NULL);
     
-    if (isCanceled()){
+    if (isCanceled()) {
+        self.isDrawing = NO;
         CFSAFERELEASE(visibleFrame);
         CFSAFERELEASE(frameSetter);
         return;
@@ -605,7 +620,8 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
         [self handleFrameForActiveTextAndInsertImageWithCTFrame:visibleFrame];
     }
     
-    if (isCanceled()){
+    if (isCanceled()) {
+        self.isDrawing = NO;
         CFSAFERELEASE(visibleFrame);
         CFSAFERELEASE(frameSetter);
         return;
@@ -620,13 +636,13 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
     self.reCalculate = NO;
     self.reCheck = NO;
     self.finishFirstDraw = YES;
+    self.isDrawing = NO;
     ///绘制上下文
     CTFrameDraw(visibleFrame, context);
     
     ///内存管理
     CFSAFERELEASE(visibleFrame);
     CFSAFERELEASE(frameSetter);
-    
     CGContextRestoreGState(context);
 }
 
@@ -733,8 +749,12 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
                                 reDraw:(BOOL)reDraw
 {
     if (self.finishFirstDraw) {
-        self.reCalculate = reCalculate;
-        self.reCheck = reCheck;
+        if (!self.reCalculate && reCalculate) {//防止计算需求被抵消
+            self.reCalculate = YES;
+        }
+        if (!self.reCheck && reCheck) {//防止链接检测需求被抵消
+            self.reCheck = YES;
+        }
     }
     if (reDraw) {
         [self setNeedsDisplay];
@@ -850,6 +870,7 @@ static inline NSArray * DWRangeExcept(NSRange targetRange,NSRange exceptRange){
         if (!image) {///检测图片，不是图片跳过
             return;
         }
+        
         dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
         CGFloat padding = [dic[@"padding"] floatValue];
         if (padding != 0) {
@@ -1265,6 +1286,10 @@ static CGFloat widthCallBacks(void * ref)
 
 -(void)setNeedsDisplay
 {
+    if (self.isDrawing) {
+        return;
+    }
+    self.isDrawing = YES;
     [super setNeedsDisplay];
     [self.layer setNeedsDisplay];
 }
@@ -1672,8 +1697,5 @@ static CGFloat widthCallBacks(void * ref)
     }
     return _customLinkDic;
 }
-    
--(void)setMAStr:(NSMutableAttributedString *)mAStr {
-    _mAStr = mAStr;
-}
+
 @end
