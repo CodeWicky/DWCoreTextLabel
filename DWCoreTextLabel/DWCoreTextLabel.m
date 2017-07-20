@@ -54,6 +54,9 @@ return;\
 ///保存可变排除区域的数组
 @property (nonatomic ,strong) NSMutableArray * exclusionP;
 
+///排除区域配置字典
+@property (nonatomic ,strong) NSDictionary * exclusionDic;
+
 ///具有响应事件
 @property (nonatomic ,assign) BOOL hasActionToDo;
 
@@ -63,8 +66,8 @@ return;\
 ///重新计算
 @property (nonatomic ,assign) BOOL reCalculate;
 
-///绘制尺寸
-@property (nonatomic ,assign) CGRect drawFrame;
+/////绘制尺寸
+//@property (nonatomic ,assign) CGRect drawFrame;
 
 ///绘制范围
 @property (nonatomic ,strong) UIBezierPath * drawPath;
@@ -137,7 +140,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 ///以路径绘制图片
 -(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    NSMutableDictionary * dic = [self configImage:image WithPath:path margin:margin drawMode:mode target:target selector:selector];
+    NSMutableDictionary * dic = [self configImage:image withPath:path margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -153,7 +156,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!placeHolder) {
         placeHolder = [UIImage new];
     }
-    NSMutableDictionary * dic = [self configImage:placeHolder WithPath:path margin:margin drawMode:mode target:target selector:selector];
+    NSMutableDictionary * dic = [self configImage:placeHolder withPath:path margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -543,7 +546,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         DRAWCANCELED
         ///绘制的工厂
         CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
-        CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, NULL);
+        CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, (__bridge_retained CFDictionaryRef)self.exclusionDic);
         
         if (isCanceled()) {
             CFSAFERELEASE(visibleFrame);
@@ -599,7 +602,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     return dic;
 }
     
--(NSMutableDictionary *)configImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+-(NSMutableDictionary *)configImage:(UIImage *)image withPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
     if (!image) {
         return nil;
     }
@@ -692,33 +695,33 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 
 ///处理绘制frame及path
 -(void)handleDrawFrameAndPathWithLimitWidth:(CGFloat)limitWidth limitHeight:(CGFloat)limitHeight {
+    ///处理图片排除区域
+    [self handleImageExclusionWithContainer:self.imageExclusion];
+    
+    ///获取全部排除区域
+    NSMutableArray * exclusion = [NSMutableArray array];
+    if (self.exclusionPaths.count) {
+        [exclusion addObjectsFromArray:self.exclusionP];
+    }
+    if (self.imageExclusion.count) {
+        [exclusion addObjectsFromArray:self.imageExclusion];
+    }
+    
+    ///获取排除区域配置字典
+    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
+    self.exclusionDic = getExclusionDic(exclusion, frame);
+    
+    ///根据排除字典生成绘制尺寸
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
-    ///生成绘制尺寸
-    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines);
+    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines,(__bridge_retained CFDictionaryRef)self.exclusionDic);
     CFSAFERELEASE(frameSetter);
     self.suggestSize = CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
-    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
-    
-    ///处理图片排除区域
-    [self handleImageExclusion];
     
     ///处理对其方式方式
     [self handleAlignmentWithFrame:&frame suggestSize:suggestSize limitWidth:limitWidth];
     
-    self.drawFrame = frame;
-    
     ///创建绘制区域
-    UIBezierPath * path = [UIBezierPath bezierPathWithRect:self.drawFrame];
-    ///排除区域处理
-    if (self.exclusionPaths.count) {
-        [self handleDrawPath:path frame:self.drawFrame exclusionArray:self.exclusionP];
-    }
-    
-    ///图片环绕区域处理
-    if (self.imageExclusion.count) {
-        [self handleDrawPath:path frame:self.drawFrame exclusionArray:self.imageExclusion];
-    }
-    self.drawPath = path;
+    self.drawPath =  [UIBezierPath bezierPathWithRect:frame];
 }
 
 ///文本变化相关处理
@@ -732,12 +735,12 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 }
 
 ///处理图片环绕数组，绘制前调用
--(void)handleImageExclusion {
-    [self.imageExclusion removeAllObjects];
+-(void)handleImageExclusionWithContainer:(NSMutableArray *)container {
+    [container removeAllObjects];
     [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeSurround) {
             UIBezierPath * newPath = [dic[@"drawPath"] copy];
-            [self.imageExclusion addObject:newPath];
+            [container addObject:newPath];
         }
     }];
 }
@@ -1009,6 +1012,7 @@ static CGFloat widthCallBacks(void * ref) {
         return self.suggestSize;
     }
     CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (size.width - self.textInsets.left - self.textInsets.right) : 0;
+    CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
     
     NSMutableAttributedString * mAStr = getMAStr(self,limitWidth);
     
@@ -1020,8 +1024,18 @@ static CGFloat widthCallBacks(void * ref) {
     }];
     [self handleStr:mAStr withInsertImageArr:arrInsert];
     
+    NSMutableArray * exclusionArr = [NSMutableArray array];
+    [self handleImageExclusionWithContainer:exclusionArr];
+    if (self.exclusionPaths.count) {
+        [exclusionArr addObjectsFromArray:self.exclusionP];
+    }
+    
+    ///获取排除区域配置字典
+    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
+    NSDictionary * exclusionDic = getExclusionDic(exclusionArr, frame);
+    
     CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
-    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines);
+    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines,(__bridge_retained CFDictionaryRef)exclusionDic);
     CFSAFERELEASE(frameSetter);
     return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
 }

@@ -35,7 +35,7 @@ NSMutableAttributedString * getMAStr(DWCoreTextLabel * label,CGFloat limitWidth)
 NSInteger getInsertOffset(NSMutableArray * locations,NSInteger newLoc);
 
 ///获取绘制尺寸
-CGSize getSuggestSize(CTFramesetterRef frameSetter,CGFloat limitWidth,NSMutableAttributedString * str,NSUInteger numberOfLines);
+CGSize getSuggestSize(CTFramesetterRef frameSetter,CGFloat limitWidth,NSMutableAttributedString * str,NSUInteger numberOfLines,CFDictionaryRef exclusionDic);
 
 ///获取计算绘制可见文本范围
 NSRange getRangeToDrawForVisibleString(NSAttributedString * aStr,UIBezierPath * drawPath);
@@ -72,6 +72,15 @@ NSRange getRangeOffset(NSRange range,NSMutableArray * arrLocationImgHasAdd);
 
 ///返回目标范围排除指定范围后的结果数组
 NSArray * getRangeExcept(NSRange targetRange,NSRange exceptRange);
+
+/**
+ 返回排除区域字典
+
+ @param paths 需要排除的区域数组
+ @param viewBounds 实际绘制bounds
+ @return 排除区域的配置字典
+ */
+NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds);
 
 #pragma mark ---镜像转换方法---
 ///获取镜像path

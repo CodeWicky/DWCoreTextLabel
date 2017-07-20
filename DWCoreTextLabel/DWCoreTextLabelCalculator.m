@@ -66,14 +66,13 @@ NSInteger getInsertOffset(NSMutableArray * locations,NSInteger newLoc)
 }
 
 ///获取绘制尺寸
-CGSize getSuggestSize(CTFramesetterRef frameSetter,CGFloat limitWidth,NSMutableAttributedString * str,NSUInteger numberOfLines)
-{
+CGSize getSuggestSize(CTFramesetterRef frameSetter,CGFloat limitWidth,NSMutableAttributedString * str,NSUInteger numberOfLines,CFDictionaryRef exclusionDic) {
     CGSize restrictSize = CGSizeMake(limitWidth, MAXFLOAT);
     if (numberOfLines == 1) {
         restrictSize = CGSizeMake(MAXFLOAT, MAXFLOAT);
     }
     CFRange rangeToDraw = getRangeToDraw(frameSetter,limitWidth,str,numberOfLines);
-    CGSize suggestSize = CTFramesetterSuggestFrameSizeWithConstraints(frameSetter, rangeToDraw, nil, restrictSize, nil);
+    CGSize suggestSize = CTFramesetterSuggestFrameSizeWithConstraints(frameSetter, rangeToDraw, exclusionDic, restrictSize, nil);
     return CGSizeMake(MIN(suggestSize.width, limitWidth), suggestSize.height);
 }
 
@@ -226,6 +225,38 @@ NSArray * getRangeExcept(NSRange targetRange,NSRange exceptRange) {
     }
     return arr.copy;
 };
+
+///返回排除区域字典
+NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds) {
+    if (paths.count == 0) {
+        return NULL;
+    }
+    NSMutableArray *pathsArray = [[NSMutableArray alloc] init];
+    [paths enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        convertPath(obj, viewBounds);
+        NSDictionary *clippingPathDictionary = [NSDictionary dictionaryWithObject:(__bridge id)(obj.CGPath) forKey:(__bridge NSString *)kCTFramePathClippingPathAttributeName];
+        [pathsArray addObject:clippingPathDictionary];
+    }];
+    
+    int eFrameWidth=0;
+    CFNumberRef frameWidth = CFNumberCreate(NULL, kCFNumberNSIntegerType, &eFrameWidth);
+    
+    int eFillRule = kCTFramePathFillEvenOdd;
+    CFNumberRef fillRule = CFNumberCreate(NULL, kCFNumberNSIntegerType, &eFillRule);
+    
+    int eProgression = kCTFrameProgressionTopToBottom;
+    CFNumberRef progression = CFNumberCreate(NULL, kCFNumberNSIntegerType, &eProgression);
+    
+    CFStringRef keys[] = { kCTFrameClippingPathsAttributeName, kCTFramePathFillRuleAttributeName, kCTFrameProgressionAttributeName, kCTFramePathWidthAttributeName};
+    CFTypeRef values[] = { (__bridge CFTypeRef)(pathsArray), fillRule, progression, frameWidth};
+    CFDictionaryRef clippingPathsDictionary = CFDictionaryCreate(NULL,
+                                                                 (const void **)&keys, (const void **)&values,
+                                                                 sizeof(keys) / sizeof(keys[0]),
+                                                                 &kCFTypeDictionaryKeyCallBacks,
+                                                                 &kCFTypeDictionaryValueCallBacks);
+
+    return [NSDictionary dictionaryWithObjectsAndKeys:pathsArray,kCTFrameClippingPathsAttributeName,@(kCTFramePathFillEvenOdd),kCTFramePathFillRuleAttributeName,@(kCTFrameProgressionTopToBottom),kCTFrameProgressionAttributeName,@0,kCTFramePathWidthAttributeName, nil];
+}
 
 #pragma mark ---镜像转换方法---
 ///获取镜像path
