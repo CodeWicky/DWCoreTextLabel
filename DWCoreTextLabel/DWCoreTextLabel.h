@@ -125,6 +125,10 @@
  version 1.2.0
  与pod保持相同版本号
  
+ version 1.2.1
+ 修复无文本崩溃问题
+ 更换加锁绘制方式为GCD Barried
+ 
  */
 
 #import <UIKit/UIKit.h>
@@ -211,7 +215,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  排除区域位于文本区域外部，排除区域失效
  排除区域重叠部分奇数重合区域则为不排除
  */
-@property (nonatomic ,strong) NSMutableArray<UIBezierPath *> * exclusionPaths;
+@property (nonatomic ,strong) NSArray<UIBezierPath *> * exclusionPaths;
 
 ///自动重绘
 /**
