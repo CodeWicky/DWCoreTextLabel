@@ -128,7 +128,7 @@
  version 1.2.1
  修复无文本崩溃问题
  更换加锁绘制方式为GCD Barried
- 改造排除区域算法，修复sizeThatFits方法计算未考虑排除区域bug（textInset对排除区域绘制的影响以及sizeThatFits的结果待验证）
+ 改造排除区域算法，修复sizeThatFits待重写 
  
  */
 

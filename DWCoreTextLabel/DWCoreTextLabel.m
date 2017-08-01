@@ -13,11 +13,20 @@
 #import "DWCoreTextLabelCalculator.h"
 
 #define DRAWCANCELED \
-{\
+do {\
 if (isCanceled()) {\
 return;\
 }\
-}
+} while(0);
+
+#define DRAWCANCELEDWITHREALSE(x,y) \
+do {\
+if (isCanceled()) {\
+CFSAFERELEASE(x)\
+CFSAFERELEASE(y)\
+return;\
+}\
+} while(0);
 
 @interface DWCoreTextLabel ()
 
@@ -71,9 +80,6 @@ return;\
 
 ///绘制范围
 @property (nonatomic ,strong) UIBezierPath * drawPath;
-
-///适应尺寸
-@property (nonatomic ,assign) CGSize suggestSize;
 
 ///首次绘制
 @property (nonatomic ,assign) BOOL finishFirstDraw;
@@ -294,34 +300,104 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
     [str insertAttributedString:placeHolderAttrStr atIndex:location + offset];
 }
 
+///根据三种类型获取配置字典
+-(NSMutableDictionary *)configImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    if (!image) {
+        return nil;
+    }
+    if (CGRectEqualToRect(frame, CGRectZero)) {
+        return nil;
+    }
+    CGRect drawFrame = CGRectInset(frame, margin, margin);
+    UIBezierPath * drawPath = [UIBezierPath bezierPathWithRect:frame];
+    UIBezierPath * activePath = getImageAcitvePath(drawPath,margin);
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":drawPath,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:drawFrame],@"margin":@(margin),@"drawMode":@(mode)}];
+    if (target && selector) {
+        [dic setValue:target forKey:@"target"];
+        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    return dic;
+}
+
+-(NSMutableDictionary *)configImage:(UIImage *)image withPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    if (!image) {
+        return nil;
+    }
+    if (!path) {
+        return nil;
+    }
+    UIBezierPath * newPath = [path copy];
+    [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
+    image = [DWCoreTextLabel dw_ClipImage:image withPath:newPath mode:(DWImageClipModeScaleAspectFill)];
+    UIBezierPath * activePath = getImageAcitvePath(path,margin);
+    
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":path,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:CGRectInset(path.bounds, margin, margin)],@"drawMode":@(mode)}];
+    if (target && selector) {
+        [dic setValue:target forKey:@"target"];
+        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    return dic;
+}
+
+-(NSMutableDictionary *)configImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+    if (!image) {
+        return nil;
+    }
+    if (padding != 0) {
+        size = CGSizeMake(size.width + padding * 2, size.height);
+    }
+    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"padding":@(padding),@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
+    if (target && selector) {
+        [dic setValue:target forKey:@"target"];
+        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    return dic;
+}
+
+///处理占位图的绘制及替换工作
+-(void)handlePlaceHolderDic:(NSMutableDictionary *)dic withUrl:(NSString *)url editImage:(UIImage *(^)(UIImage * image))edit {
+    ///将配置字典添加到占位图字典中
+    NSMutableArray * placeHolderArr = self.placeHolderDic[url];
+    if (!placeHolderArr) {
+        placeHolderArr = [NSMutableArray array];
+        self.placeHolderDic[url] = placeHolderArr;
+    }
+    if (![placeHolderArr containsObject:dic]) {
+        [placeHolderArr addObject:dic];
+    }
+    
+    ///绘制占位图
+    [self.imageArr addObject:dic];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
+    
+    ///下载网络图片
+    __weak typeof(self)weakSelf = self;
+    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
+        ///下载完成后替换占位图配置字典中图片为网络图片并绘制
+        if (image) {
+            if (edit) {
+                image = edit(image);
+            }
+            NSMutableArray * placeHolderArr = weakSelf.placeHolderDic[url];
+            if (placeHolderArr) {
+                [placeHolderArr enumerateObjectsUsingBlock:^(NSMutableDictionary * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                    [obj setValue:image forKey:@"image"];
+                }];
+                [placeHolderArr removeAllObjects];
+                [weakSelf handleAutoRedrawWithRecalculate:NO reCheck:NO];
+            }
+        }
+    }];
+}
+
 #pragma mark ---文本相关---
 
-///处理对齐方式
--(void)handleAlignmentWithFrame:(CGRect *)frame suggestSize:(CGSize)suggestSize limitWidth:(CGFloat)limitWidth {
-    if ((self.exclusionPaths.count + self.imageExclusion.count) == 0) {///若无排除区域按对齐方式处理
-        if ((*frame).size.height > suggestSize.height) {///垂直对齐方式处理
-            (*frame).size = suggestSize;
-            CGPoint origin = (*frame).origin;
-            if (self.textVerticalAlignment == DWTextVerticalAlignmentCenter) {
-                origin.y = self.bounds.size.height / 2.0 - suggestSize.height / 2.0;
-            }
-            else if (self.textVerticalAlignment == DWTextVerticalAlignmentTop)
-            {
-                origin.y = self.bounds.size.height - suggestSize.height - self.textInsets.top;
-            }
-            (*frame).origin = origin;
-        }
-        
-        if ((*frame).size.width < limitWidth) {///水平对齐方式处理
-            CGPoint origin = (*frame).origin;
-            if (self.textAlignment == NSTextAlignmentCenter) {
-                origin.x = self.bounds.size.width / 2.0 - (*frame).size.width / 2.0;
-            } else if (self.textAlignment == NSTextAlignmentRight) {
-                origin.x = self.bounds.size.width - (*frame).size.width - self.textInsets.right;
-            }
-            (*frame).origin = origin;
-        }
-    }
+///处理句尾省略号
+-(void)handleLastLineTruncateWithLastLineRange:(CFRange)range {
+    NSDictionary * lastAttribute = [self.mAStr attributesAtIndex:self.mAStr.length - 1 effectiveRange:NULL];
+    NSMutableParagraphStyle * newPara = [lastAttribute[NSParagraphStyleAttributeName] mutableCopy];
+    newPara.lineBreakMode = NSLineBreakByTruncatingTail;
+    [self.mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
 }
 
 ///添加活跃文本属性方法
@@ -466,14 +542,13 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 }
 
 ///处理文本高亮状态
--(NSRange)handleStringHighlightAttributesWithRangeSet:(NSMutableSet *)rangeSet {
-    NSRange linkRange = getRangeToDrawForVisibleString(self.mAStr,self.drawPath);
-    [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:self.mAStr linkRange:linkRange rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink"];
+-(void)handleStringHighlightAttributesWithRangeSet:(NSMutableSet *)rangeSet visibleRange:(CFRange)visibleRange {
+    NSRange vRange = NSMakeRange(visibleRange.location, visibleRange.length);
+    [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:self.mAStr linkRange:vRange rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink"];
     ///处理自动检测链接
     if (self.autoCheckLink) {
-        [self handleAutoCheckLinkWithStr:self.mAStr linkRange:linkRange rangeSet:rangeSet];
+        [self handleAutoCheckLinkWithStr:self.mAStr linkRange:vRange rangeSet:rangeSet];
     }
-    return linkRange;
 }
 
 ///处理匹配结果中重复范围
@@ -500,15 +575,31 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         CGFloat limitWidth = (self.bounds.size.width - self.textInsets.left - self.textInsets.right) > 0 ? (self.bounds.size.width - self.textInsets.left - self.textInsets.right) : 0;
         CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
         
+        ///获取排除区域
+        NSArray * exclusionPaths = [self handleExclusionPaths];
+        CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
+        NSDictionary * exclusionConfig = getExclusionDic(exclusionPaths, frame);
         BOOL needDrawString = self.attributedText.length || self.text.length;
         
         DRAWCANCELED
         if ((self.reCalculate || !self.mAStr) && needDrawString) {
-            ///获取要绘制的文本
-            self.mAStr = getMAStr(self,limitWidth);
+            ///获取要绘制的文本(初步处理，未处理插入图片、句尾省略号、高亮)
+            self.mAStr = getMAStr(self,limitWidth,exclusionPaths);
+        }
+        CTFramesetterRef frameSetter4Cal = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
+        CTFrameRef frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
+        
+        
+        CFRange visibleRange = getRangeToDrawForVisibleString(frame4Cal);
+        CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
+        
+        ///处理句尾省略号
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
+        if ((self.reCalculate || !self.mAStr) && needDrawString) {
+            [self handleLastLineTruncateWithLastLineRange:lastRange];
         }
         
-        DRAWCANCELED
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///已添加事件、链接的集合
         NSMutableSet * rangeSet = [NSMutableSet set];
         ///添加活跃文本属性方法
@@ -516,7 +607,13 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
             [self handleActiveTextWithStr:self.mAStr rangeSet:rangeSet withImage:!self.reCalculate];
         }
         
-        DRAWCANCELED
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
+        ///处理文本高亮状态并获取可见绘制文本范围
+        if (needDrawString) {
+            [self handleStringHighlightAttributesWithRangeSet:rangeSet visibleRange:visibleRange];
+        }
+        
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///处理插入图片
         if (self.reCalculate && needDrawString) {
             NSMutableArray * arrInsert = [NSMutableArray array];
@@ -525,44 +622,55 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
                     [arrInsert addObject:dic];
                 }
             }];
-            ///富文本插入图片占位符
-            [self handleStr:self.mAStr withInsertImageArr:arrInsert];
+            
+            if (arrInsert.count) {
+                ///富文本插入图片占位符
+                [self handleStr:self.mAStr withInsertImageArr:arrInsert];
+                ///插入图片后重新处理工厂及frame，添加插入图片后的字符串，消除插入图片影响
+                CFSAFERELEASE(frameSetter4Cal)
+                CFSAFERELEASE(frame4Cal)
+                frameSetter4Cal = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
+                frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
+                visibleRange = getRangeToDrawForVisibleString(frame4Cal);
+            }
         }
         
+        /***************************/
+        /*  至此富文本绘制配置处理完毕  */
+        /***************************/
+        
+
         DRAWCANCELED
         ///计算drawFrame及drawPath
         if (self.reCalculate) {
-            [self handleDrawFrameAndPathWithLimitWidth:limitWidth limitHeight:limitHeight];
+            [self handleDrawFrameAndPathWithLimitWidth:limitWidth limitHeight:limitHeight frameSetter:frameSetter4Cal rangeToDraw:visibleRange exclusionPaths:exclusionPaths];
         }
         
-        DRAWCANCELED
-        ///处理文本高亮状态并获取可见绘制文本范围
+        CFSAFERELEASE(frameSetter4Cal)
+        CFSAFERELEASE(frame4Cal)
         
-        NSRange visibleRange = NSMakeRange(0, 0);
-        if (needDrawString) {
-            visibleRange = [self handleStringHighlightAttributesWithRangeSet:rangeSet];
-        }
+        /**********************/
+        /*  至此绘制区域处理完毕  */
+        /**********************/
         
         DRAWCANCELED
         ///绘制的工厂
         CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
-        CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, CFRangeMake(0,visibleRange.length), self.drawPath.CGPath, (__bridge_retained CFDictionaryRef)self.exclusionDic);
+        ///绘制范围为可见范围加1，防止末尾省略号失效（由于path为可见尺寸，故仅绘制可见范围时有的时候末尾的省略号会失效，同时不可超过字符串本身长度）
+        CFRange drawRange = CFRangeMake(0, visibleRange.length < self.mAStr.length ? visibleRange.length + 1 : self.mAStr.length);
+        CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, drawRange, self.drawPath.CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
         
-        if (isCanceled()) {
-            CFSAFERELEASE(visibleFrame);
-            CFSAFERELEASE(frameSetter);
-            return;
-        }
+        DRAWCANCELEDWITHREALSE(frameSetter, visibleFrame)
         if (self.reCalculate && needDrawString) {
             ///计算活跃文本及插入图片的frame
             [self handleFrameForActiveTextAndInsertImageWithCTFrame:visibleFrame];
         }
         
-        if (isCanceled()) {
-            CFSAFERELEASE(visibleFrame);
-            CFSAFERELEASE(frameSetter);
-            return;
-        }
+        /**********************/
+        /*  至此点击区域处理完毕  */
+        /**********************/
+        
+        DRAWCANCELEDWITHREALSE(frameSetter, visibleFrame)
         ///绘制图片
         [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
             UIImage * image = dic[@"image"];
@@ -576,103 +684,59 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         ///绘制上下文
         CTFrameDraw(visibleFrame, context);
         
+        /*******************/
+        /*  至此绘制处理完毕  */
+        /*******************/
+        
         ///内存管理
-        CFSAFERELEASE(visibleFrame);
-        CFSAFERELEASE(frameSetter);
+        CFSAFERELEASE(visibleFrame)
+        CFSAFERELEASE(frameSetter)
         CGContextRestoreGState(context);
     });
 }
 
-///根据三种类型获取配置字典
--(NSMutableDictionary *)configImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    if (!image) {
-        return nil;
-    }
-    if (CGRectEqualToRect(frame, CGRectZero)) {
-        return nil;
-    }
-    CGRect drawFrame = CGRectInset(frame, margin, margin);
-    UIBezierPath * drawPath = [UIBezierPath bezierPathWithRect:frame];
-    UIBezierPath * activePath = getImageAcitvePath(drawPath,margin);
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":drawPath,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:drawFrame],@"margin":@(margin),@"drawMode":@(mode)}];
-    if (target && selector) {
-        [dic setValue:target forKey:@"target"];
-        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
-    }
-    return dic;
-}
+///处理绘制frame及path
+-(void)handleDrawFrameAndPathWithLimitWidth:(CGFloat)limitWidth limitHeight:(CGFloat)limitHeight  frameSetter:(CTFramesetterRef)frameSetter rangeToDraw:(CFRange)rangeToDraw exclusionPaths:(NSArray * )exclusionPaths {
     
--(NSMutableDictionary *)configImage:(UIImage *)image withPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    if (!image) {
-        return nil;
-    }
-    if (!path) {
-        return nil;
-    }
-    UIBezierPath * newPath = [path copy];
-    [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
-    image = [DWCoreTextLabel dw_ClipImage:image withPath:newPath mode:(DWImageClipModeScaleAspectFill)];
-    UIBezierPath * activePath = getImageAcitvePath(path,margin);
+    ///获取排除区域配置字典
+    CGRect frameR = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
     
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"drawPath":path,@"activePath":activePath,@"frame":[NSValue valueWithCGRect:CGRectInset(path.bounds, margin, margin)],@"drawMode":@(mode)}];
-    if (target && selector) {
-        [dic setValue:target forKey:@"target"];
-        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    if (exclusionPaths.count == 0) {
+        ///若无排除区域处理对其方式方式
+        CGSize suggestSize = getSuggestSize(frameSetter, rangeToDraw, limitWidth, self.numberOfLines);
+        [self handleAlignmentWithFrame:&frameR suggestSize:suggestSize limitWidth:limitWidth];
     }
-    return dic;
-}
     
--(NSMutableDictionary *)configImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
-    if (!image) {
-        return nil;
-    }
-    if (padding != 0) {
-        size = CGSizeMake(size.width + padding * 2, size.height);
-    }
-    NSMutableDictionary * dic = [NSMutableDictionary dictionaryWithDictionary:@{@"image":image,@"size":[NSValue valueWithCGSize:size],@"padding":@(padding),@"location":@(location),@"descent":@(descent),@"drawMode":@(DWTextImageDrawModeInsert)}];
-    if (target && selector) {
-        [dic setValue:target forKey:@"target"];
-        [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
-    }
-    return dic;
+    ///创建绘制区域
+    self.drawPath =  [UIBezierPath bezierPathWithRect:frameR];
 }
 
-///处理占位图的绘制及替换工作
--(void)handlePlaceHolderDic:(NSMutableDictionary *)dic withUrl:(NSString *)url editImage:(UIImage *(^)(UIImage * image))edit {
-    ///将配置字典添加到占位图字典中
-    NSMutableArray * placeHolderArr = self.placeHolderDic[url];
-    if (!placeHolderArr) {
-        placeHolderArr = [NSMutableArray array];
-        self.placeHolderDic[url] = placeHolderArr;
-    }
-    if (![placeHolderArr containsObject:dic]) {
-        [placeHolderArr addObject:dic];
-    }
-    
-    ///绘制占位图
-    [self.imageArr addObject:dic];
-    [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
-    
-    ///下载网络图片
-    __weak typeof(self)weakSelf = self;
-    [[DWWebImageManager shareManager] downloadImageWithUrl:url completion:^(UIImage *image) {
-        ///下载完成后替换占位图配置字典中图片为网络图片并绘制
-        if (image) {
-            if (edit) {
-                image = edit(image);
-            }
-            NSMutableArray * placeHolderArr = weakSelf.placeHolderDic[url];
-            if (placeHolderArr) {
-                [placeHolderArr enumerateObjectsUsingBlock:^(NSMutableDictionary * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-                    [obj setValue:image forKey:@"image"];
-                }];
-                [placeHolderArr removeAllObjects];
-                [weakSelf handleAutoRedrawWithRecalculate:NO reCheck:NO];
-            }
+///处理对齐方式
+-(void)handleAlignmentWithFrame:(CGRect *)frame suggestSize:(CGSize)suggestSize limitWidth:(CGFloat)limitWidth {
+    if ((*frame).size.height > suggestSize.height) {///垂直对齐方式处理
+        (*frame).size = suggestSize;
+        CGPoint origin = (*frame).origin;
+        if (self.textVerticalAlignment == DWTextVerticalAlignmentCenter) {
+            origin.y = self.bounds.size.height / 2.0 - suggestSize.height / 2.0;
         }
-    }];
+        else if (self.textVerticalAlignment == DWTextVerticalAlignmentTop)
+        {
+            origin.y = self.bounds.size.height - suggestSize.height - self.textInsets.top;
+        }
+        (*frame).origin = origin;
+    }
+    if ((*frame).size.width < limitWidth) {///水平对齐方式处理
+        CGPoint origin = (*frame).origin;
+        if (self.textAlignment == NSTextAlignmentCenter) {
+            origin.x = self.bounds.size.width / 2.0 - (*frame).size.width / 2.0;
+        } else if (self.textAlignment == NSTextAlignmentRight) {
+            origin.x = self.bounds.size.width - (*frame).size.width - self.textInsets.right;
+        }
+        (*frame).origin = origin;
+    }
 }
 
+#pragma mark --- 重绘行为处理 ---
 ///自动重绘
 -(void)handleAutoRedrawWithRecalculate:(BOOL)reCalculate reCheck:(BOOL)reCheck {
     [self handleAutoRedrawWithRecalculate:reCalculate reCheck:reCheck reDraw:YES];
@@ -693,39 +757,9 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     }
 }
 
-///处理绘制frame及path
--(void)handleDrawFrameAndPathWithLimitWidth:(CGFloat)limitWidth limitHeight:(CGFloat)limitHeight {
-    ///处理图片排除区域
-    [self handleImageExclusionWithContainer:self.imageExclusion];
-    
-    ///获取全部排除区域
-    NSMutableArray * exclusion = [NSMutableArray array];
-    if (self.exclusionPaths.count) {
-        [exclusion addObjectsFromArray:self.exclusionP];
-    }
-    if (self.imageExclusion.count) {
-        [exclusion addObjectsFromArray:self.imageExclusion];
-    }
-    
-    ///获取排除区域配置字典
-    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
-    self.exclusionDic = getExclusionDic(exclusion, frame);
-    
-    ///根据排除字典生成绘制尺寸
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
-    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines,(__bridge_retained CFDictionaryRef)self.exclusionDic);
-    CFSAFERELEASE(frameSetter);
-    self.suggestSize = CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
-    
-    ///处理对其方式方式
-    [self handleAlignmentWithFrame:&frame suggestSize:suggestSize limitWidth:limitWidth];
-    
-    ///创建绘制区域
-    self.drawPath =  [UIBezierPath bezierPathWithRect:frame];
-}
-
 ///文本变化相关处理
 -(void)handleTextChange {
+    self.mAStr = nil;
     [self.imageArr removeAllObjects];
     [self.activeTextArr removeAllObjects];
     [self.autoLinkArr removeAllObjects];
@@ -745,16 +779,22 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     }];
 }
 
-///处理绘制Path，绘制前调用
--(void)handleDrawPath:(UIBezierPath *)path frame:(CGRect)frame exclusionArray:(NSMutableArray *)array {
-    [array enumerateObjectsUsingBlock:^(UIBezierPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (CGRectContainsRect(path.bounds, obj.bounds)) {
-            convertPath(obj,frame);
-            [path appendPath:obj];
-        }
-    }];
+///获取排除区域数组
+-(NSArray *)handleExclusionPaths {
+    ///处理图片排除区域
+    [self handleImageExclusionWithContainer:self.imageExclusion];
+    ///获取全部排除区域
+    NSMutableArray * exclusion = [NSMutableArray array];
+    if (self.exclusionPaths.count) {
+        [exclusion addObjectsFromArray:self.exclusionP];
+    }
+    if (self.imageExclusion.count) {
+        [exclusion addObjectsFromArray:self.imageExclusion];
+    }
+    return exclusion;
 }
 
+#pragma mark --- 点击事件相关 ---
 ///将所有插入图片和活跃文本字典中的frame补全，重绘前调用
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame {
     [self.activeTextArr removeAllObjects];
@@ -837,63 +877,6 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
     [arr addObject:dicWithFrame];
 }
 
-#pragma mark ---获取点击行为---
--(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    CGPoint point = [[touches anyObject] locationInView:self];
-    
-    NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
-    BOOL autoLink = [dic[@"link"] length];
-    if (dic) {
-        [self handleHighlightClickWithDic:dic isLink:autoLink];
-        return;
-    }
-    [super touchesBegan:touches withEvent:event];
-}
-
--(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    if (self.hasActionToDo) {
-        CGPoint point = [[touches anyObject] locationInView:self];
-        NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
-        if (!self.hasActionToDo || ![self.highlightDic isEqualToDictionary:dic]) {
-            if (self.textClicked) {
-                self.textClicked = NO;
-                self.highlightDic = nil;
-                [self setNeedsDisplay];
-            } else if (self.linkClicked) {
-                self.linkClicked = NO;
-                self.highlightDic = nil;
-                [self setNeedsDisplay];
-            }
-        }
-        return;
-    }
-    [super touchesMoved:touches withEvent:event];
-}
-
--(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    if (self.hasActionToDo) {
-        CGPoint point = [[touches anyObject] locationInView:self];
-        NSMutableDictionary * dic = getImageDic(self.imageArr,point);
-        if (dic) {
-            [self handleClickWithDic:dic];
-            return;
-        }
-        dic = self.highlightDic;
-        if (dic) {
-            if (self.textClicked) {
-                self.textClicked = NO;
-                [self setNeedsDisplay];
-            } else if (self.linkClicked) {
-                self.linkClicked = NO;
-                [self setNeedsDisplay];
-            }
-            [self handleClickWithDic:dic];
-            return;
-        }
-    }
-    [super touchesEnded:touches withEvent:event];
-}
-
 ///自动链接事件
 -(void)autoLinkClicked:(NSDictionary *)userInfo {
     if (self.delegate && [self.delegate respondsToSelector:@selector(coreTextLabel:didSelectLink:range:linkType:)]) {
@@ -952,6 +935,63 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
     return nil;
 }
 
+#pragma mark --- 获取点击行为 ---
+-(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    CGPoint point = [[touches anyObject] locationInView:self];
+    
+    NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
+    BOOL autoLink = [dic[@"link"] length];
+    if (dic) {
+        [self handleHighlightClickWithDic:dic isLink:autoLink];
+        return;
+    }
+    [super touchesBegan:touches withEvent:event];
+}
+
+-(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (self.hasActionToDo) {
+        CGPoint point = [[touches anyObject] locationInView:self];
+        NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
+        if (!self.hasActionToDo || ![self.highlightDic isEqualToDictionary:dic]) {
+            if (self.textClicked) {
+                self.textClicked = NO;
+                self.highlightDic = nil;
+                [self setNeedsDisplay];
+            } else if (self.linkClicked) {
+                self.linkClicked = NO;
+                self.highlightDic = nil;
+                [self setNeedsDisplay];
+            }
+        }
+        return;
+    }
+    [super touchesMoved:touches withEvent:event];
+}
+
+-(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    if (self.hasActionToDo) {
+        CGPoint point = [[touches anyObject] locationInView:self];
+        NSMutableDictionary * dic = getImageDic(self.imageArr,point);
+        if (dic) {
+            [self handleClickWithDic:dic];
+            return;
+        }
+        dic = self.highlightDic;
+        if (dic) {
+            if (self.textClicked) {
+                self.textClicked = NO;
+                [self setNeedsDisplay];
+            } else if (self.linkClicked) {
+                self.linkClicked = NO;
+                [self setNeedsDisplay];
+            }
+            [self handleClickWithDic:dic];
+            return;
+        }
+    }
+    [super touchesEnded:touches withEvent:event];
+}
+
 #pragma mark ---CTRun 代理---
 static CGFloat ascentCallBacks(void * ref) {
     NSDictionary * dic = (__bridge NSDictionary *)ref;
@@ -1007,38 +1047,35 @@ static CGFloat widthCallBacks(void * ref) {
     self.frame = frame;
 }
 
--(CGSize)sizeThatFits:(CGSize)size {
-    if (!CGSizeEqualToSize(self.suggestSize, CGSizeZero)) {
-        return self.suggestSize;
-    }
-    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (size.width - self.textInsets.left - self.textInsets.right) : 0;
-    CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
-    
-    NSMutableAttributedString * mAStr = getMAStr(self,limitWidth);
-    
-    NSMutableArray * arrInsert = [NSMutableArray array];
-    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
-            [arrInsert addObject:dic];
-        }
-    }];
-    [self handleStr:mAStr withInsertImageArr:arrInsert];
-    
-    NSMutableArray * exclusionArr = [NSMutableArray array];
-    [self handleImageExclusionWithContainer:exclusionArr];
-    if (self.exclusionPaths.count) {
-        [exclusionArr addObjectsFromArray:self.exclusionP];
-    }
-    
-    ///获取排除区域配置字典
-    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
-    NSDictionary * exclusionDic = getExclusionDic(exclusionArr, frame);
-    
-    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
-    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines,(__bridge_retained CFDictionaryRef)exclusionDic);
-    CFSAFERELEASE(frameSetter);
-    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
-}
+//-(CGSize)sizeThatFits:(CGSize)size {
+//    CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (size.width - self.textInsets.left - self.textInsets.right) : 0;
+//    CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
+//    
+//    NSMutableAttributedString * mAStr = getMAStr(self,limitWidth);
+//    
+//    NSMutableArray * arrInsert = [NSMutableArray array];
+//    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+//        if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
+//            [arrInsert addObject:dic];
+//        }
+//    }];
+//    [self handleStr:mAStr withInsertImageArr:arrInsert];
+//    
+//    NSMutableArray * exclusionArr = [NSMutableArray array];
+//    [self handleImageExclusionWithContainer:exclusionArr];
+//    if (self.exclusionPaths.count) {
+//        [exclusionArr addObjectsFromArray:self.exclusionP];
+//    }
+//    
+//    ///获取排除区域配置字典
+//    CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
+//    NSDictionary * exclusionDic = getExclusionDic(exclusionArr, frame);
+//    
+//    CTFramesetterRef frameSetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
+//    CGSize suggestSize = getSuggestSize(frameSetter,limitWidth,self.mAStr,self.numberOfLines,(__bridge_retained CFDictionaryRef)exclusionDic);
+//    CFSAFERELEASE(frameSetter);
+//    return CGSizeMake(suggestSize.width + self.textInsets.left + self.textInsets.right, suggestSize.height + self.textInsets.top + self.textInsets.bottom);
+//}
 
 -(void)setFrame:(CGRect)frame {
     if (!CGRectEqualToRect(self.frame, frame)) {
