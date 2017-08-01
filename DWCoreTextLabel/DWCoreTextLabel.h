@@ -129,7 +129,7 @@
  修复无文本崩溃问题
  更换加锁绘制方式为GCD Barried
  改造排除区域算法
- -sizeFitThats:及-sizeToFit改造完成
+ -sizeThatFits:及-sizeToFit改造完成
  修复由textInset上下数值不一样时排除区域偏移的bug
  
  */

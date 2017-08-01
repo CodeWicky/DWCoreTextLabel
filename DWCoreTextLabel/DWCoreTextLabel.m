@@ -576,7 +576,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         CGFloat limitHeight = (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (self.bounds.size.height - self.textInsets.top - self.textInsets.bottom) : 0;
         
         ///获取排除区域
-        NSArray * exclusionPaths = [self handleExclusionPaths];
+        NSArray * exclusionPaths = [self handleExclusionPathsWithOffset:self.textInsets.bottom - self.textInsets.top];
         CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
         NSDictionary * exclusionConfig = getExclusionDic(exclusionPaths, frame);
         BOOL needDrawString = self.attributedText.length || self.text.length;
@@ -779,8 +779,8 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     }];
 }
 
-///获取排除区域数组
--(NSArray *)handleExclusionPaths {
+///获取排除区域数组（不校正为图片绘制区域，校正为文字环绕区域）
+-(NSArray *)handleExclusionPathsWithOffset:(CGFloat)offset {
     ///处理图片排除区域
     [self handleImageExclusion];
     ///获取全部排除区域
@@ -788,12 +788,12 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     
     ///此处排除区域需要对textInset的偏移量进行校正
     [self.exclusionP enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        translatePath(obj, self.textInsets.bottom - self.textInsets.top);
+        translatePath(obj, offset);
         [exclusion addObject:obj];
     }];
     
     [self.imageExclusion enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        translatePath(obj, self.textInsets.bottom - self.textInsets.top);
+        translatePath(obj, offset);
         [exclusion addObject:obj];
     }];
     return exclusion;
@@ -1057,8 +1057,8 @@ static CGFloat widthCallBacks(void * ref) {
     CGFloat limitWidth = (size.width - self.textInsets.left - self.textInsets.right) > 0 ? (size.width - self.textInsets.left - self.textInsets.right) : 0;
     CGFloat limitHeight = (size.height - self.textInsets.top - self.textInsets.bottom) > 0 ? (size.height - self.textInsets.top - self.textInsets.bottom) : 0;
     
-    ///获取排除区域
-    NSArray * exclusionPaths = [self handleExclusionPaths];
+    ///获取排除区域（考虑偏移矫正，保证正确绘制）
+    NSArray * exclusionPaths = [self handleExclusionPathsWithOffset:self.textInsets.bottom - self.textInsets.top];
     CGRect frame = CGRectMake(self.textInsets.left, self.textInsets.bottom, limitWidth, limitHeight);
     NSDictionary * exclusionConfig = getExclusionDic(exclusionPaths, frame);
     BOOL needDrawString = self.attributedText.length || self.text.length;
@@ -1071,9 +1071,7 @@ static CGFloat widthCallBacks(void * ref) {
     CTFramesetterRef frameSetter4Cal = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)mAStr);
     CTFrameRef frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
     
-    
     CFRange visibleRange = getRangeToDrawForVisibleString(frame4Cal);
-    
     
     ///处理句尾省略号
     if (needDrawString) {
@@ -1125,15 +1123,22 @@ static CGFloat widthCallBacks(void * ref) {
     CFRange drawRange = CFRangeMake(0, visibleRange.length < mAStr.length ? visibleRange.length + 1 : mAStr.length);
     CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, drawRange, drawP.CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
     
+    ///根据最后一行frame换算整体frame
     NSArray * arrLines = (NSArray *)CTFrameGetLines(visibleFrame);
     CTLineRef lastLine = (__bridge_retained CTLineRef)arrLines.lastObject;
     CGPoint points[arrLines.count];
     CTFrameGetLineOrigins(visibleFrame, CFRangeMake(0, 0), points);
     CGPoint origin = points[arrLines.count - 1];
     CTRunRef run = (__bridge_retained CTRunRef)((NSArray *)CTLineGetGlyphRuns(lastLine)).lastObject;
-    CGRect desFrame = convertRect(getCTRunBounds(visibleFrame, lastLine, origin, run), size.height);
+    __block CGRect desFrame = convertRect(getCTRunBounds(visibleFrame, lastLine, origin, run), size.height);
+    desFrame = CGRectMake(0, 0, size.width, ceil(desFrame.origin.y + desFrame.size.height + self.textInsets.bottom + self.textInsets.top));
     
-    return CGSizeMake(size.width, ceil(desFrame.origin.y + desFrame.size.height + self.textInsets.bottom + self.textInsets.top));
+    ///重新获取为矫正偏移的图片实际绘制Path
+    exclusionPaths = [self handleExclusionPathsWithOffset:0];
+    [exclusionPaths enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        desFrame = CGRectUnion(obj.bounds, desFrame);
+    }];
+    return CGSizeMake(size.width, desFrame.size.height);
 }
 
 -(void)setFrame:(CGRect)frame {
