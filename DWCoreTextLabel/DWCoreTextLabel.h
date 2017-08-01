@@ -128,7 +128,9 @@
  version 1.2.1
  修复无文本崩溃问题
  更换加锁绘制方式为GCD Barried
- 改造排除区域算法，修复sizeThatFits待重写 
+ 改造排除区域算法
+ -sizeFitThats:及-sizeToFit改造完成
+ 修复由textInset上下数值不一样时排除区域偏移的bug
  
  */
 
@@ -378,6 +380,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  注：
  1.在指定位置插入图片，图片大小会影响行间距
  2.插入图片的位置不影响为范围内文字添加点击事件，无需另做考虑
+ 3.由于CoreText计算原理导致，有些情况下插入大图绘制时由于绘制区域无法完整绘制大图导致绘制错误，插入位置后字符串的会无法显示。故绘制大图建议采用dw_DrawImage系列API进行绘制。插入系列更适合聊天文字中穿插表情等相似情景。
  */
 -(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
@@ -406,5 +409,24 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  下载图片并剪裁
  */
 +(void)dw_ClipImageWithUrl:(NSString *)url withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode completion:(void(^)(UIImage * image))completion;
+
+
+/**
+ 返回限制尺寸下当前视图最合适的尺寸
+
+ @param size 限制尺寸
+ @return 最佳尺寸
+ 
+ 注：如果当前视图上无任何排除区域，此处是指没有exclusionPaths及DWTextImageDrawModeSurround模式的图片的话，返回的尺寸真实有效。否则返回的尺寸不保证严格正确，少数情况下存在一定误差，当排除区域越多时，对结果准确性影响越大，但高度影响不超过10%。另外限制尺寸应尽量选择大概数字，计算速度直接取决于限制尺寸，切勿填写MAXFLOAT。
+ */
+-(CGSize)sizeThatFits:(CGSize)size;
+
+
+/**
+ 自动设置为当前视图最合适的尺寸
+ 
+ 注：此函数基于-sizeThatFits:，故其特性与注意事项与-sizeThatFits:相同
+ */
+-(void)sizeToFit;
 @end
 

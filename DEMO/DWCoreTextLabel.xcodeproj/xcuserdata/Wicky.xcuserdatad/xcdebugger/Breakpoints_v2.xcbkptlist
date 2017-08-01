@@ -10,45 +10,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "523251328.42343"
+            timestampString = "523268711.357431"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "645"
-            endingLineNumber = "645"
-            landmarkName = "-drawTheTextWithContext:isCanceled:"
+            startingLineNumber = "796"
+            endingLineNumber = "796"
+            landmarkName = "-handleExclusionPaths"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "__53-[DWCoreTextLabel drawTheTextWithContext:isCanceled:]_block_invoke"
-                  moduleName = "DWCoreTextLabel"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Wicky/Desktop/Wicky/Git/DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-                  timestampString = "523200639.3246"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "537"
-                  endingLineNumber = "537"
-                  offsetFromSymbolStart = "3670">
-               </Location>
-               <Location
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "__53-[DWCoreTextLabel drawTheTextWithContext:isCanceled:]_block_invoke_2"
-                  moduleName = "DWCoreTextLabel"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Wicky/Desktop/Wicky/Git/DWCoreTextLabel/DWCoreTextLabel/DWCoreTextLabel.m"
-                  timestampString = "523200639.335054"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "538"
-                  endingLineNumber = "538"
-                  offsetFromSymbolStart = "75">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

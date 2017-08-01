@@ -168,3 +168,12 @@ void convertPath(UIBezierPath * path,CGRect bounds);
  @return 镜像后的尺寸
  */
 CGRect convertRect(CGRect rect,CGFloat height);
+
+
+/**
+ 平移路径
+
+ @param path 原始路径
+ @param offsetY 纵向平移距离
+ */
+void translatePath(UIBezierPath * path,CGFloat offsetY);

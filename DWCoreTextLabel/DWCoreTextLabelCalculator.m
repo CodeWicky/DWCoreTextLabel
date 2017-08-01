@@ -228,4 +228,9 @@ CGRect convertRect(CGRect rect,CGFloat height) {
     return CGRectMake(rect.origin.x, height - rect.origin.y - rect.size.height, rect.size.width, rect.size.height);
 }
 
+///平移路径
+void translatePath(UIBezierPath * path,CGFloat offsetY) {
+    [path applyTransform:CGAffineTransformMakeTranslation(0, offsetY)];
+}
+
 
