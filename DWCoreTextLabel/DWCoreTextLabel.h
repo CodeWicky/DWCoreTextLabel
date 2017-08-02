@@ -131,6 +131,7 @@
  改造排除区域算法
  -sizeThatFits:及-sizeToFit改造完成
  修复由textInset上下数值不一样时排除区域偏移的bug
+ 改以最后一行确定最佳范围为遍历CTRun尺寸并集
  
  */
 
@@ -177,7 +178,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 
 @interface DWCoreTextLabel : UIView
 
-#pragma mark ---基本属性---
+#pragma mark --- 基本属性 ---
 ///代理
 @property (nonatomic ,weak) id<DWCoreTextLabelDelegate> delegate;
 
@@ -211,8 +212,9 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 ///行间距
 @property (nonatomic ,assign) CGFloat lineSpacing;
 
-///排除区域组
 /**
+ 排除区域组
+ 
  注：
  设置排除区域后，对齐方式失效
  排除区域位于文本区域外部，排除区域失效
@@ -220,11 +222,18 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 @property (nonatomic ,strong) NSArray<UIBezierPath *> * exclusionPaths;
 
-///自动重绘
 /**
+ 自动重绘
+ 
  默认关闭，开启后设置需要重绘的属性后自动重绘
  */
 @property (nonatomic ,assign) BOOL autoRedraw;
+
+///活跃文本的属性
+@property (nonatomic ,strong) NSDictionary * activeTextAttributes;
+
+///活跃文本的高亮属性
+@property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
 
 /**
  自动检测特殊链接
@@ -232,7 +241,6 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  注：
  1.包括手机号码
  2.默认关闭
- 
  */
 @property (nonatomic ,assign) BOOL autoCheckLink;
 
@@ -254,13 +262,9 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 @property (nonatomic ,copy) NSString * customLinkRegex;
 
-#pragma mark ---链接属性---
-///活跃文本的属性
-@property (nonatomic ,strong) NSDictionary * activeTextAttributes;
-
-///活跃文本的高亮属性
-@property (nonatomic ,strong) NSDictionary * activeTextHighlightAttributes;
+#pragma mark --- 自动连接属性 ---
 ///以下属性在autoCheckLink为真时有效
+
 /**
  自然数属性
  */
@@ -311,71 +315,59 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 @property (nonatomic ,strong) NSDictionary * customLinkHighlightAttributes;
 
-#pragma mark ---方法---
+#pragma mark --- 接口方法 ---
 /**
  以frame绘制矩形图片
  
- image      将要绘制的图片
- frame      绘制图片的尺寸
- margin     绘制图片时的内距效果，margin大于0时，绘制的实际尺寸小于frame，同时保证绘制中心不变
- drawMode   图片绘制模式，包括环绕型和覆盖型
- target     可选参数，与target配套使用
- selector   为图片添加点击事件，响应区域为图片实际绘制区域
- 
- 注：surround模式下，frame应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
- 若图片有重合区域，请以coverMode绘制并自行添加排除区域
+ image          将要绘制的图片
+ url            网络图片的地址
+ placeHolder    网络图片下载完成之前的占位图
+ frame          绘制图片的尺寸
+ margin         绘制图片时的内距效果，margin大于0时，绘制的实际尺寸小于frame，同时保证绘制中心不变
+ drawMode       图片绘制模式，包括环绕型和覆盖型
+ target         可选参数，与target配套使用
+ selector       为图片添加点击事件，响应区域为图片实际绘制区域
  */
 -(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
-/**
- 以frame绘制矩形网络图片，参数释义同上
- */
 -(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
-/**
- 以frame绘制矩形网络图片，参数释义同上
- 
- 注：下载未完成时以占位图占位，即绘制区域被保留，以下网络图片绘制且有占位图API中逻辑相同
- */
 -(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  以path绘制不规则形状图片
  
- image      将要绘制的图片
- path       绘制图片的路径，先以path对图片进行剪裁，后绘制
- margin     绘制图片时的内距效果，margin大于0时，绘制的实际路径小于path，同时保证绘制中心不变
- drawMode   图片绘制模式，包括环绕型和覆盖型
- target     可选参数，与target配套使用
- selector   为图片添加点击事件，响应区域为图片实际绘制区域
+ image          将要绘制的图片
+ url            网络图片的地址
+ placeHolder    网络图片下载完成之前的占位图
+ path           绘制图片的路径，先以path对图片进行剪裁，后绘制
+ margin         绘制图片时的内距效果，margin大于0时，绘制的实际路径小于path，同时保证绘制中心不变
+ drawMode       图片绘制模式，包括环绕型和覆盖型
+ target         可选参数，与target配套使用
+ selector       为图片添加点击事件，响应区域为图片实际绘制区域
  
  注：
- 1.surround模式下，path应在文本区域内部，若存在外部，请以coverMode绘制并自行添加排除区域
- 若图片有重合区域，请以coverMode绘制并自行添加排除区域
- 2.将自动按照path路径形状剪裁图片，图片无需事先处理
- 3.自动剪裁图片时按照path的形状剪裁，与origin无关。
+ 1.将自动按照path路径形状剪裁图片，图片无需事先处理
+ 2.自动剪裁图片时按照path的形状剪裁，与origin无关。
  */
 -(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
-/**
- 以path绘制不规则图形网络图片，参数释义同上
- */
 -(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
-/**
- 以path绘制不规则图形网络图片，参数释义同上
- */
+
 -(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
  
- image      将要绘制的图片
- size       绘制图片的大小
- padding    绘制图片时的外距效果，padding大于0时，绘制的图片距两端文字有padding的距离
- descent    绘制图片的底部基线与文字基线的偏移量，当descent等于0时，与文字的底部基线对其
- location   要插入图片的位置
- target     可选参数，与target配套使用
- selector   为图片添加点击事件，响应区域为图片实际绘制区域
+ image          将要绘制的图片
+ url            网络图片的地址
+ placeHolder    网络图片下载完成之前的占位图
+ size           绘制图片的大小
+ padding        绘制图片时的外距效果，padding大于0时，绘制的图片距两端文字有padding的距离
+ descent        绘制图片的底部基线与文字基线的偏移量，当descent等于0时，与文字的底部基线对其
+ location       要插入图片的位置
+ target         可选参数，与target配套使用
+ selector       为图片添加点击事件，响应区域为图片实际绘制区域
  
  注：
  1.在指定位置插入图片，图片大小会影响行间距
@@ -384,32 +376,37 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  */
 -(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
-/**
- 插入网络图片，参数释义同上
- */
 -(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
-
-/**
- 插入网络图片，参数释义同上
- */
 -(void)dw_InsertImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
 /**
  为指定区域文本添加点击事件
+
+ @param target 响应者
+ @param selector 响应事件
+ @param range 添加事件的区域
+ 
+ 注：此处无需考虑插入图片位置的影响，无论之前插入范围还是之后插入范围，只需传入插入图片之前文字范围即可。API将自动对文字事件范围做偏移校正。
  */
 -(void)dw_AddTarget:(id)target selector:(SEL)selector toRange:(NSRange)range;
 
 /**
  返回指定形状的image对象
  */
-+(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode;
+
 
 /**
- 下载图片并剪裁
- */
-+(void)dw_ClipImageWithUrl:(NSString *)url withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode completion:(void(^)(UIImage * image))completion;
+ 返回指定形状的image对象
 
+ image 需要剪裁的图片
+ url 网络图片的地址
+ path 剪裁的路径
+ mode 图片填充的模式
+ */
++(UIImage *)dw_ClipImage:(UIImage *)image withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode;
+
++(void)dw_ClipImageWithUrl:(NSString *)url withPath:(UIBezierPath *)path mode:(DWImageClipMode)mode completion:(void(^)(UIImage * image))completion;
 
 /**
  返回限制尺寸下当前视图最合适的尺寸
@@ -417,7 +414,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  @param size 限制尺寸
  @return 最佳尺寸
  
- 注：如果当前视图上无任何排除区域，此处是指没有exclusionPaths及DWTextImageDrawModeSurround模式的图片的话，返回的尺寸真实有效。否则返回的尺寸不保证严格正确，少数情况下存在一定误差，当排除区域越多时，对结果准确性影响越大，但高度影响不超过10%。另外限制尺寸应尽量选择大概数字，计算速度直接取决于限制尺寸，切勿填写MAXFLOAT。
+ 注：限制尺寸应尽量选择大概近似数字，计算速度直接取决于限制尺寸，尺寸越大计算耗时越长，切勿填写MAXFLOAT。
  */
 -(CGSize)sizeThatFits:(CGSize)size;
 

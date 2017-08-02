@@ -12,6 +12,7 @@
 #import "DWWebImage.h"
 #import "DWCoreTextLabelCalculator.h"
 
+///绘制取消
 #define DRAWCANCELED \
 do {\
 if (isCanceled()) {\
@@ -19,6 +20,15 @@ return;\
 }\
 } while(0);
 
+///安全释放
+#define CFSAFERELEASE(a)\
+do {\
+if(a != NULL) {\
+CFRelease(a);\
+}\
+} while(0);
+
+///绘制取消并且安全释放
 #define DRAWCANCELEDWITHREALSE(x,y) \
 do {\
 if (isCanceled()) {\
@@ -75,9 +85,6 @@ return;\
 ///重新计算
 @property (nonatomic ,assign) BOOL reCalculate;
 
-/////绘制尺寸
-//@property (nonatomic ,assign) CGRect drawFrame;
-
 ///绘制范围
 @property (nonatomic ,strong) UIBezierPath * drawPath;
 
@@ -117,7 +124,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 @synthesize customLinkAttributes = _customLinkAttributes;
 @synthesize customLinkHighlightAttributes = _customLinkHighlightAttributes;
 
-#pragma mark ---接口方法---
+#pragma mark --- 接口方法 ---
 
 ///以指定模式绘制图片
 -(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
@@ -271,7 +278,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     }];
 }
 
-#pragma mark ---插入图片相关---
+#pragma mark --- 插入图片相关 ---
 
 ///将所有插入图片插入字符串
 -(void)handleStr:(NSMutableAttributedString *)str withInsertImageArr:(NSMutableArray *)arr arrLocationImgHasAdd:(NSMutableArray *)arrLocationImgHasAdd {
@@ -1123,22 +1130,27 @@ static CGFloat widthCallBacks(void * ref) {
     CFRange drawRange = CFRangeMake(0, visibleRange.length < mAStr.length ? visibleRange.length + 1 : mAStr.length);
     CTFrameRef visibleFrame = CTFramesetterCreateFrame(frameSetter, drawRange, drawP.CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
     
-    ///根据最后一行frame换算整体frame
-    NSArray * arrLines = (NSArray *)CTFrameGetLines(visibleFrame);
-    CTLineRef lastLine = (__bridge_retained CTLineRef)arrLines.lastObject;
-    CGPoint points[arrLines.count];
-    CTFrameGetLineOrigins(visibleFrame, CFRangeMake(0, 0), points);
-    CGPoint origin = points[arrLines.count - 1];
-    CTRunRef run = (__bridge_retained CTRunRef)((NSArray *)CTLineGetGlyphRuns(lastLine)).lastObject;
-    __block CGRect desFrame = convertRect(getCTRunBounds(visibleFrame, lastLine, origin, run), size.height);
-    desFrame = CGRectMake(0, 0, size.width, ceil(desFrame.origin.y + desFrame.size.height + self.textInsets.bottom + self.textInsets.top));
+    __block CGRect desFrame = CGRectZero;
+    
+    [self enumerateCTRunInFrame:visibleFrame handler:^(CTLineRef line, CTRunRef run, CGPoint origin, BOOL *stop) {
+        CGRect temp = convertRect(getCTRunBounds(visibleFrame, line, origin, run), size.height);
+        desFrame = CGRectUnion(temp, desFrame);
+    }];
+    
+    CFSAFERELEASE(frameSetter)
+    CFSAFERELEASE(visibleFrame)
+    
+    desFrame = CGRectMake(0, 0, ceil(desFrame.origin.x + desFrame.size.width + self.textInsets.right), ceil(desFrame.origin.y + desFrame.size.height + self.textInsets.bottom));
     
     ///重新获取为矫正偏移的图片实际绘制Path
     exclusionPaths = [self handleExclusionPathsWithOffset:0];
     [exclusionPaths enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
         desFrame = CGRectUnion(obj.bounds, desFrame);
     }];
-    return CGSizeMake(size.width, desFrame.size.height);
+    
+    CGRect limitRect = CGRectMake(0, 0, size.width, size.height);
+    desFrame = CGRectIntersection(limitRect, desFrame);
+    return desFrame.size;
 }
 
 -(void)setFrame:(CGRect)frame {

@@ -10,14 +10,6 @@
 #import <CoreText/CoreText.h>
 @class DWCoreTextLabel;
 
-//安全释放
-#define CFSAFERELEASE(a)\
-do {\
-if(a != NULL) {\
-CFRelease(a);\
-}\
-} while(0);
-
 #pragma mark --- 获取相关数据 ---
 
 /**
