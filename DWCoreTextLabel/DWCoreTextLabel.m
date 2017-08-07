@@ -786,24 +786,36 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     }];
 }
 
+-(NSArray *)handleSubviewsExclusionPaths {
+    NSMutableArray * arr = [NSMutableArray array];
+    [self.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIBezierPath * path = [UIBezierPath bezierPathWithRect:obj.frame];
+        [arr addObject:path];
+    }];
+    return arr;
+}
+
 ///获取排除区域数组（不校正为图片绘制区域，校正为文字环绕区域）
 -(NSArray *)handleExclusionPathsWithOffset:(CGFloat)offset {
     ///处理图片排除区域
     [self handleImageExclusion];
+    
     ///获取全部排除区域
     NSMutableArray * exclusion = [NSMutableArray array];
-    
-    ///此处排除区域需要对textInset的偏移量进行校正
-    [self.exclusionP enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        translatePath(obj, offset);
-        [exclusion addObject:obj];
-    }];
-    
-    [self.imageExclusion enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        translatePath(obj, offset);
-        [exclusion addObject:obj];
-    }];
+    handleExclusionPathArr(exclusion, self.exclusionP, offset);
+    handleExclusionPathArr(exclusion, self.imageExclusion, offset);
+    if (self.excludeSubViews && self.subviews.count > 0) {
+        NSArray * subViewPath = [self handleSubviewsExclusionPaths];
+        handleExclusionPathArr(exclusion, subViewPath, offset);
+    }
     return exclusion;
+}
+
+static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
+    [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        translatePath(obj, offset);
+        [container addObject:obj];
+    }];
 }
 
 #pragma mark --- 点击事件相关 ---
@@ -1037,6 +1049,7 @@ static CGFloat widthCallBacks(void * ref) {
         _lineBreakMode = NSLineBreakByCharWrapping;
         _reCalculate = YES;
         _reCheck = YES;
+        _excludeSubViews = YES;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;
@@ -1246,6 +1259,13 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setExclusionPaths:(NSArray<UIBezierPath *> *)exclusionPaths {
     _exclusionPaths = exclusionPaths;
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
+}
+
+-(void)setExcludeSubViews:(BOOL)excludeSubViews {
+    if (_excludeSubViews != excludeSubViews) {
+        _excludeSubViews = excludeSubViews;
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
+    }
 }
 
 -(void)setNumberOfLines:(NSUInteger)numberOfLines {

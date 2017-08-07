@@ -151,16 +151,16 @@ typedef NS_ENUM(NSInteger,DWImageClipMode)//图片剪裁模式
 };
 
 typedef NS_ENUM(NSUInteger, DWTextImageDrawMode) {///绘制模式
-    DWTextImageDrawModeSurround,
-    DWTextImageDrawModeCover
+    DWTextImageDrawModeSurround,///环绕模式（控件中包含环绕模式图片后对其设置失效）
+    DWTextImageDrawModeCover///覆盖模式
 };
 
 typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
-    DWLinkTypeNaturalNum,
-    DWLinkTypePhoneNo,
-    DWLinkTypeURL,
-    DWLinkTypeEmail,
-    DWLinkTypeCustom
+    DWLinkTypeNaturalNum,///自然数
+    DWLinkTypePhoneNo,///手机号
+    DWLinkTypeURL,///URL
+    DWLinkTypeEmail,///Email
+    DWLinkTypeCustom///自定制
 };
 
 #define DWDefaultAttributes @{NSUnderlineStyleAttributeName:@(NSUnderlineStyleSingle),NSForegroundColorAttributeName:[UIColor blueColor]}
@@ -217,10 +217,19 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  
  注：
  设置排除区域后，对齐方式失效
- 排除区域位于文本区域外部，排除区域失效
- 排除区域重叠部分奇数重合区域则为不排除
  */
 @property (nonatomic ,strong) NSArray<UIBezierPath *> * exclusionPaths;
+
+
+/**
+ 排除子视图区域
+ 
+ 注：
+ 1.若为真且子视图数量非0，对齐方式失效。
+ 2.默认开启
+ 3.开启后在重绘时自动排除。
+ */
+@property (nonatomic ,assign) BOOL excludeSubViews;
 
 /**
  自动重绘
@@ -425,5 +434,6 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  注：此函数基于-sizeThatFits:，故其特性与注意事项与-sizeThatFits:相同
  */
 -(void)sizeToFit;
+
 @end
 
