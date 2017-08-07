@@ -804,7 +804,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     NSMutableArray * exclusion = [NSMutableArray array];
     handleExclusionPathArr(exclusion, self.exclusionP, offset);
     handleExclusionPathArr(exclusion, self.imageExclusion, offset);
-    if (self.excludeSubViews && self.subviews.count > 0) {
+    if (self.excludeSubviews && self.subviews.count > 0) {
         NSArray * subViewPath = [self handleSubviewsExclusionPaths];
         handleExclusionPathArr(exclusion, subViewPath, offset);
     }
@@ -1049,7 +1049,7 @@ static CGFloat widthCallBacks(void * ref) {
         _lineBreakMode = NSLineBreakByCharWrapping;
         _reCalculate = YES;
         _reCheck = YES;
-        _excludeSubViews = YES;
+        _excludeSubviews = YES;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;
@@ -1261,9 +1261,9 @@ static CGFloat widthCallBacks(void * ref) {
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
--(void)setExcludeSubViews:(BOOL)excludeSubViews {
-    if (_excludeSubViews != excludeSubViews) {
-        _excludeSubViews = excludeSubViews;
+-(void)setExcludeSubviews:(BOOL)excludeSubviews {
+    if (_excludeSubviews != excludeSubviews) {
+        _excludeSubviews = excludeSubviews;
         [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }

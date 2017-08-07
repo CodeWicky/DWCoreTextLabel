@@ -229,7 +229,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  2.默认开启
  3.开启后在重绘时自动排除。
  */
-@property (nonatomic ,assign) BOOL excludeSubViews;
+@property (nonatomic ,assign) BOOL excludeSubviews;
 
 /**
  自动重绘
