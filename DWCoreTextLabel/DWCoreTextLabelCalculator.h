@@ -10,6 +10,14 @@
 #import <CoreText/CoreText.h>
 @class DWCoreTextLabel;
 
+///安全释放
+#define CFSAFERELEASE(a)\
+do {\
+if(a != NULL) {\
+CFRelease(a);\
+}\
+} while(0);
+
 #pragma mark --- 获取相关数据 ---
 
 /**
@@ -85,6 +93,25 @@ UIBezierPath * getImageAcitvePath(UIBezierPath * path,CGFloat margin);
  注：此坐标为系统坐标，需于屏幕坐标进行转换
  */
 CGRect getCTRunBounds(CTFrameRef frame,CTLineRef line,CGPoint origin,CTRunRef run);
+
+
+/**
+ 获取尺寸相对于Frame的路径校正后的尺寸
+
+ @param rect 原始尺寸
+ @param frame 对应CTFrame
+ @return 校正后尺寸
+ */
+CGRect getRectWithCTFramePathOffset(CGRect rect,CTFrameRef frame);
+
+
+/**
+ 获取Frame的路径的横坐标偏移
+
+ @param frame 对应CTFrame
+ @return 横坐标偏移量
+ */
+CGFloat getCTFramePahtXOffset(CTFrameRef frame);
 
 /**
  获取活动图片中包含点的字典

@@ -133,6 +133,9 @@
  修复由textInset上下数值不一样时排除区域偏移的bug
  改以最后一行确定最佳范围为遍历CTRun尺寸并集
  
+ version 1.2.2
+ 添加DWCoreTextLayout布局类，统一管理布局信息，点击事件响应方式可根据布局类进行改造（待改造）
+ 
  */
 
 #import <UIKit/UIKit.h>

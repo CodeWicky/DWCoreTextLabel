@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "10CF82FA390C138383AE63CE6948C0193732089F",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "10CF82FA390C138383AE63CE6948C0193732089F" : 9223372036854775807,
+    "19A8EA9119395F091A7FCBD544D1C179ADF2D240" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "80A7E2C1-4290-4DBA-A1F9-81F03446ED8F",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "10CF82FA390C138383AE63CE6948C0193732089F" : "DWCoreTextLabel\/",
+    "19A8EA9119395F091A7FCBD544D1C179ADF2D240" : "%E4%B8%80%E4%BA%9B%E5%B7%A5%E5%85%B7%E7%B1%BB\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "DWCoreTextLabel",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "DEMO\/DWCoreTextLabel.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/CodeWicky\/DWCoreTextLabel.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "10CF82FA390C138383AE63CE6948C0193732089F"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/CodeWicky\/-Tools.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "19A8EA9119395F091A7FCBD544D1C179ADF2D240"
+    }
+  ]
+}

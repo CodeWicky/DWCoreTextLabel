@@ -18,6 +18,7 @@
 		9BA02F491DF44C2000AB9565 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9BA02F471DF44C2000AB9565 /* LaunchScreen.storyboard */; };
 		9BA02F541DF44C2000AB9565 /* DWCoreTextLabelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F531DF44C2000AB9565 /* DWCoreTextLabelTests.m */; };
 		9BA02F5F1DF44C2000AB9565 /* DWCoreTextLabelUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BA02F5E1DF44C2000AB9565 /* DWCoreTextLabelUITests.m */; };
+		9BB485DD1F3C003100B0CDDA /* DWCoreTextLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BB485DC1F3C003100B0CDDA /* DWCoreTextLayout.m */; };
 		9BECE7601F14E3DC00AAB61B /* DWAsyncLayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BECE75B1F14E3DC00AAB61B /* DWAsyncLayer.m */; };
 		9BECE7611F14E3DC00AAB61B /* DWCoreTextLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BECE75D1F14E3DC00AAB61B /* DWCoreTextLabel.m */; };
 		9BECE7621F14E3DC00AAB61B /* DWWebImage.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BECE75F1F14E3DC00AAB61B /* DWWebImage.m */; };
@@ -61,6 +62,8 @@
 		9BA02F5A1DF44C2000AB9565 /* DWCoreTextLabelUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DWCoreTextLabelUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9BA02F5E1DF44C2000AB9565 /* DWCoreTextLabelUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DWCoreTextLabelUITests.m; sourceTree = "<group>"; };
 		9BA02F601DF44C2000AB9565 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9BB485DB1F3C003100B0CDDA /* DWCoreTextLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWCoreTextLayout.h; sourceTree = "<group>"; };
+		9BB485DC1F3C003100B0CDDA /* DWCoreTextLayout.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWCoreTextLayout.m; sourceTree = "<group>"; };
 		9BECE75A1F14E3DC00AAB61B /* DWAsyncLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWAsyncLayer.h; sourceTree = "<group>"; };
 		9BECE75B1F14E3DC00AAB61B /* DWAsyncLayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DWAsyncLayer.m; sourceTree = "<group>"; };
 		9BECE75C1F14E3DC00AAB61B /* DWCoreTextLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWCoreTextLabel.h; sourceTree = "<group>"; };
@@ -166,6 +169,8 @@
 				9BECE75B1F14E3DC00AAB61B /* DWAsyncLayer.m */,
 				9BECE75C1F14E3DC00AAB61B /* DWCoreTextLabel.h */,
 				9BECE75D1F14E3DC00AAB61B /* DWCoreTextLabel.m */,
+				9BB485DB1F3C003100B0CDDA /* DWCoreTextLayout.h */,
+				9BB485DC1F3C003100B0CDDA /* DWCoreTextLayout.m */,
 				9B7BF98B1F20972300FCBDDC /* DWCoreTextLabelCalculator.h */,
 				9B7BF98C1F20972300FCBDDC /* DWCoreTextLabelCalculator.m */,
 				9BECE75E1F14E3DC00AAB61B /* DWWebImage.h */,
@@ -315,6 +320,7 @@
 				9BA02F411DF44C2000AB9565 /* ViewController.m in Sources */,
 				9BA02F3E1DF44C2000AB9565 /* AppDelegate.m in Sources */,
 				9B7BF98D1F20972300FCBDDC /* DWCoreTextLabelCalculator.m in Sources */,
+				9BB485DD1F3C003100B0CDDA /* DWCoreTextLayout.m in Sources */,
 				9BA02F3B1DF44C2000AB9565 /* main.m in Sources */,
 				9BECE7601F14E3DC00AAB61B /* DWAsyncLayer.m in Sources */,
 				9BECE7621F14E3DC00AAB61B /* DWWebImage.m in Sources */,

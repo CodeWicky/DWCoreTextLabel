@@ -125,9 +125,23 @@ CGRect getCTRunBounds(CTFrameRef frame,CTLineRef line,CGPoint origin,CTRunRef ru
     CGFloat xOffset = CTLineGetOffsetForStringIndex(line, CTRunGetStringRange(run).location, NULL);
     boundsRun.origin.x = origin.x + xOffset;
     boundsRun.origin.y = origin.y - descent;
+    return getRectWithCTFramePathOffset(boundsRun, frame);
+}
+
+///获取CTFrame校正后的尺寸
+CGRect getRectWithCTFramePathOffset(CGRect rect,CTFrameRef frame) {
     CGPathRef path = CTFrameGetPath(frame);
     CGRect colRect = CGPathGetBoundingBox(path);
-    return CGRectOffset(boundsRun, colRect.origin.x, colRect.origin.y);
+    return CGRectOffset(rect, colRect.origin.x, colRect.origin.y);
+}
+
+
+
+///获取Frame的路径的横坐标偏移
+CGFloat getCTFramePahtXOffset(CTFrameRef frame) {
+    CGPathRef path = CTFrameGetPath(frame);
+    CGRect colRect = CGPathGetBoundingBox(path);
+    return colRect.origin.x;
 }
 
 ///获取活动图片中包含点的字典
@@ -225,6 +239,9 @@ void convertPath(UIBezierPath * path,CGRect bounds) {
 
 ///获取镜像frame
 CGRect convertRect(CGRect rect,CGFloat height) {
+    if (CGRectEqualToRect(rect, CGRectNull)) {
+        return CGRectNull;
+    }
     return CGRectMake(rect.origin.x, height - rect.origin.y - rect.size.height, rect.size.width, rect.size.height);
 }
 

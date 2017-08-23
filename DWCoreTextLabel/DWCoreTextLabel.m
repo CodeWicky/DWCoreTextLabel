@@ -11,20 +11,13 @@
 #import "DWAsyncLayer.h"
 #import "DWWebImage.h"
 #import "DWCoreTextLabelCalculator.h"
+#import "DWCoreTextLayout.h"
 
 ///绘制取消
 #define DRAWCANCELED \
 do {\
 if (isCanceled()) {\
 return;\
-}\
-} while(0);
-
-///安全释放
-#define CFSAFERELEASE(a)\
-do {\
-if(a != NULL) {\
-CFRelease(a);\
 }\
 } while(0);
 
@@ -102,6 +95,8 @@ return;\
 
 ///绘制队列
 @property (nonatomic ,strong) dispatch_queue_t syncQueue;
+
+@property (nonatomic ,strong) DWCoreTextLayout * layout;
 
 @end
 
@@ -823,14 +818,14 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame {
     [self.activeTextArr removeAllObjects];
     [self.autoLinkArr removeAllObjects];
-    [self enumerateCTRunInFrame:frame handler:^(CTLineRef line, CTRunRef run,CGPoint origin,BOOL * stop) {
-        CGRect deleteBounds = getCTRunBounds(frame,line,origin,run);
+    _layout = [DWCoreTextLayout layoutWithCTFrame:frame convertHeight:self.bounds.size.height considerGlyphs:YES];
+    [_layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
+        CGRect deleteBounds = run.frame;
         if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
             return ;
         }
-        deleteBounds = convertRect(deleteBounds,self.bounds.size.height);
         
-        NSDictionary * attributes = (NSDictionary *)CTRunGetAttributes(run);
+        NSDictionary * attributes = run.runAttributes;
         CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
         
         if (delegate == nil) {///检测图片，不是图片检测文字
@@ -871,26 +866,6 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
             dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
         }
     }];
-}
-
-///遍历CTRun
--(void)enumerateCTRunInFrame:(CTFrameRef)frame handler:(void(^)(CTLineRef line,CTRunRef run,CGPoint origin,BOOL * stop))handler {
-    NSArray * arrLines = (NSArray *)CTFrameGetLines(frame);
-    NSInteger count = [arrLines count];
-    CGPoint points[count];
-    CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), points);
-    BOOL stop = NO;
-    for (int i = 0; i < count; i ++) {
-        CTLineRef line = (__bridge CTLineRef)arrLines[i];
-        NSArray * arrRuns = (NSArray *)CTLineGetGlyphRuns(line);
-        for (int j = 0; j < arrRuns.count; j ++) {
-            CTRunRef run = (__bridge CTRunRef)arrRuns[j];
-            handler(line,run,points[i],&stop);
-            if (stop) {
-                break;
-            }
-        }
-    }
 }
 
 ///补全frame
@@ -962,7 +937,6 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
 #pragma mark --- 获取点击行为 ---
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     CGPoint point = [[touches anyObject] locationInView:self];
-    
     NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
     BOOL autoLink = [dic[@"link"] length];
     if (dic) {
@@ -1145,8 +1119,9 @@ static CGFloat widthCallBacks(void * ref) {
     
     __block CGRect desFrame = CGRectZero;
     
-    [self enumerateCTRunInFrame:visibleFrame handler:^(CTLineRef line, CTRunRef run, CGPoint origin, BOOL *stop) {
-        CGRect temp = convertRect(getCTRunBounds(visibleFrame, line, origin, run), size.height);
+    DWCoreTextLayout * layout = [DWCoreTextLayout layoutWithCTFrame:visibleFrame convertHeight:size.height considerGlyphs:NO];
+    [layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
+        CGRect temp = run.frame;
         desFrame = CGRectUnion(temp, desFrame);
     }];
     
