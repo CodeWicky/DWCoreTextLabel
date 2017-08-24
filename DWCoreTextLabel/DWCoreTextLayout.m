@@ -59,37 +59,49 @@
     _glyphs = temp.copy;
 }
 
--(void)handleActiveRun {
+-(void)handleActiveRunWithCustomLinkRegex:(NSString *)customLinkRegex autoCheckLink:(BOOL)autoCheckLink  {
     CGRect deleteBounds = self.frame;
+    _isImage = NO;
+    _hasAction = NO;
+    _activeAttributes = nil;
     if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
         return ;
     }
-    CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[_runAttributes valueForKey:(id)kCTRunDelegateAttributeName];
-    if (delegate) {
-        NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
-        if ([dic isKindOfClass:[NSMutableDictionary class]]) {
-            UIImage * image = dic[@"image"];
-            if (image) {///检测图片，不是图片跳过
-                _isImage = YES;
-                if (dic[@"SEL"] && dic[@"target"]) {
-                    _hasAction = YES;
-                } else {
-                    _hasAction = NO;
-                }
-                dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
-                CGFloat padding = [dic[@"padding"] floatValue];
-                if (padding != 0) {
-                    deleteBounds = CGRectInset(deleteBounds, padding, 0);
-                }
-                if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
-                    dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
-                    dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
-                }
-                _activeAttributes = dic;
+    NSDictionary * attributes = self.runAttributes;
+    CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
+    NSMutableDictionary * dic = nil;
+    if (delegate == nil) {///检测图片，不是图片检测文字
+        dic = attributes[@"clickAttribute"];
+        if (!dic) {///不是活动文字检测自动链接及定制链接
+            if (customLinkRegex.length) {
+                dic = attributes[@"customLink"];
+            }
+            
+            if (!dic && autoCheckLink) {
+                dic = attributes[@"autoCheckLink"];
             }
         }
+        _activeAttributes = dic;
     } else {
-        _isImage = NO;
+        dic = CTRunDelegateGetRefCon(delegate);
+        if ([dic isKindOfClass:[NSMutableDictionary class]] && dic[@"image"]) {
+            _isImage = YES;
+            dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
+            CGFloat padding = [dic[@"padding"] floatValue];
+            if (padding != 0) {
+                deleteBounds = CGRectInset(deleteBounds, padding, 0);
+            }
+            if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
+                dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
+                dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
+            }
+            _activeAttributes = dic;
+        }
+    }
+    if (_activeAttributes) {
+        if (_activeAttributes[@"target"] && _activeAttributes[@"SEL"]) {
+            _hasAction = YES;
+        }
     }
 }
 
@@ -202,9 +214,9 @@
     return self;
 }
 
--(void)handleActiveImageAndText {
+-(void)handleActiveImageAndTextWithCustomLinkRegex:(NSString *)customLinkRegex autoCheckLink:(BOOL)autoCheckLink {
     [self enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
-        [run handleActiveRun];
+        [run handleActiveRunWithCustomLinkRegex:customLinkRegex autoCheckLink:autoCheckLink];
     }];
 }
 

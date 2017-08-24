@@ -129,10 +129,14 @@
 +(instancetype)layoutWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs;
 
 
+
 /**
  自动处理具有响应事件的图片及文字
+
+ @param customLinkRegex 自定制链接匹配正则
+ @param autoCheckLink 是否自动检测链接
  */
--(void)handleActiveImageAndText;
+-(void)handleActiveImageAndTextWithCustomLinkRegex:(NSString *)customLinkRegex autoCheckLink:(BOOL)autoCheckLink;
 
 
 /**

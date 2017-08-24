@@ -584,7 +584,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         BOOL needDrawString = self.attributedText.length || self.text.length;
         
         DRAWCANCELED
-        if ((self.reCalculate || !self.mAStr) && needDrawString) {
+        if (needDrawString) {///必须重新计算（防止设置高亮颜色未设置普通颜色时点击后不恢复的bug）
             ///获取要绘制的文本(初步处理，未处理插入图片、句尾省略号、高亮)
             self.mAStr = getMAStr(self,limitWidth,exclusionPaths);
         }
@@ -819,7 +819,7 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
     [self.activeTextArr removeAllObjects];
     [self.autoLinkArr removeAllObjects];
     _layout = [DWCoreTextLayout layoutWithCTFrame:frame convertHeight:self.bounds.size.height considerGlyphs:YES];
-    [_layout handleActiveImageAndText];
+    [_layout handleActiveImageAndTextWithCustomLinkRegex:self.customLinkRegex autoCheckLink:self.autoCheckLink];
     [_layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
         CGRect deleteBounds = run.frame;
         if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
@@ -830,22 +830,6 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
         CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
         
         if (delegate == nil) {///检测图片，不是图片检测文字
-            NSMutableDictionary * dic = attributes[@"clickAttribute"];
-            if (!dic) {///不是活动文字检测自动链接及定制链接
-                if (self.customLinkRegex.length) {
-                    dic = attributes[@"customLink"];
-                }
-                
-                if (!dic && self.autoCheckLink) {
-                    dic = attributes[@"autoCheckLink"];
-                }
-                if (!dic) {
-                    return;
-                }
-                handleFrame(self.autoLinkArr,dic,deleteBounds);
-                return;
-            }
-            handleFrame(self.activeTextArr,dic,deleteBounds);
             return;
         }
         NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
@@ -922,16 +906,17 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
         self.hasActionToDo = YES;
         return nil;
     }
-    dic = getActiveTextDic(self.activeTextArr, point);
+    DWCTRunWrapper * run = [_layout runAtPoint:point];
+    dic = run.activeAttributes.mutableCopy;
     if (dic) {
         self.hasActionToDo = YES;
         return dic;
     }
-    dic = getAutoLinkDic(self.autoLinkArr, point);
-    if (dic) {
-        self.hasActionToDo = YES;
-        return dic;
-    }
+//    dic = getAutoLinkDic(self.autoLinkArr, point);
+//    if (dic) {
+//        self.hasActionToDo = YES;
+//        return dic;
+//    }
     return nil;
 }
 
