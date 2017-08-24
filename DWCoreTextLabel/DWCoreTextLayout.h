@@ -56,6 +56,15 @@
 ///结束位置(不包含)
 @property (nonatomic ,assign ,readonly) NSUInteger endIndex;
 
+///是否是图片
+@property (nonatomic ,assign ,readonly) BOOL isImage;
+
+///是否具有事件
+@property (nonatomic ,assign ,readonly) BOOL hasAction;
+
+///具有响应事件的属性字典
+@property (nonatomic ,strong ,readonly) NSDictionary * activeAttributes;
+
 @end
 
 
@@ -118,6 +127,12 @@
  @return 返回对应的绘制layout类
  */
 +(instancetype)layoutWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs;
+
+
+/**
+ 自动处理具有响应事件的图片及文字
+ */
+-(void)handleActiveImageAndText;
 
 
 /**

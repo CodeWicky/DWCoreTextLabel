@@ -30,7 +30,7 @@
     label.textColor = [UIColor blueColor];
     [self.view addSubview:label];
 //    label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(0, 0, 50, 50)]].mutableCopy;
-//    [label dw_InsertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(414 - 50 - 20, 170) padding:25 descent:0 atLocation:91 target:self selector:@selector(clickPic)];
+    [label dw_InsertImage:[UIImage imageNamed:@"2.jpg"] size:CGSizeMake(414 - 50, 170) padding:25 descent:0 atLocation:91 target:self selector:@selector(clickPic)];
     [label dw_DrawImage:[UIImage imageNamed:@"oldDriver"] WithPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(10,5, 120, 120)] margin:5 drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(clickHeader)];
 //    [label dw_AddTarget:self selector:@selector(clickLink) toRange:NSMakeRange(126, 57)];
 //    [label dw_AddTarget:self selector:@selector(clickBlog) toRange:NSMakeRange(191, 28)];

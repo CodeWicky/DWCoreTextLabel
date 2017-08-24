@@ -59,6 +59,49 @@
     _glyphs = temp.copy;
 }
 
+-(void)handleActiveRun {
+    CGRect deleteBounds = self.frame;
+    if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
+        return ;
+    }
+    CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[_runAttributes valueForKey:(id)kCTRunDelegateAttributeName];
+    if (delegate) {
+        NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
+        if ([dic isKindOfClass:[NSMutableDictionary class]]) {
+            UIImage * image = dic[@"image"];
+            if (image) {///检测图片，不是图片跳过
+                _isImage = YES;
+                if (dic[@"SEL"] && dic[@"target"]) {
+                    _hasAction = YES;
+                } else {
+                    _hasAction = NO;
+                }
+                dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
+                CGFloat padding = [dic[@"padding"] floatValue];
+                if (padding != 0) {
+                    deleteBounds = CGRectInset(deleteBounds, padding, 0);
+                }
+                if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
+                    dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
+                    dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
+                }
+                _activeAttributes = dic;
+            }
+        }
+    } else {
+        _isImage = NO;
+    }
+}
+
+-(NSString *)description {
+    NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartIndex:\t%lu",self.startIndex]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendIndex:\t%lu",self.endIndex]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@\n}",self.glyphs]];
+    return string;
+}
+
 @end
 
 @implementation DWCTLineWrapper
@@ -81,7 +124,10 @@
 -(void)configWithOrigin:(CGPoint)origin row:(NSUInteger)row ctFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height {
     _lineOrigin = origin;
     _row = row;
-    CGRect boundsLine = CTLineGetBoundsWithOptions(self.ctLine,0);
+    CGFloat lineAscent;
+    CGFloat lineDescent;
+    CGFloat lineWidth = CTLineGetTypographicBounds(_ctLine, &lineAscent, &lineDescent, nil);
+    CGRect boundsLine = CGRectMake(0, - lineDescent, lineWidth, lineAscent + lineDescent);
     boundsLine = CGRectOffset(boundsLine, origin.x, origin.y);
     _lineRect = getRectWithCTFramePathOffset(boundsLine, ctFrame);
     _frame = convertRect(_lineRect, height);
@@ -110,6 +156,14 @@
 
 -(void)configNextLine:(DWCTLineWrapper *)nextLine {
     _nextLine = nextLine;
+}
+
+-(NSString *)description {
+    NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\trow:\t%lu",self.row]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@\n}",self.runs]];
+    return string;
 }
 
 -(void)dealloc {
@@ -146,6 +200,12 @@
         _lines = lineA.copy;
     }
     return self;
+}
+
+-(void)handleActiveImageAndText {
+    [self enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
+        [run handleActiveRun];
+    }];
 }
 
 -(void)enumerateCTRunUsingBlock:(void (^)(DWCTRunWrapper *, BOOL *))handler {

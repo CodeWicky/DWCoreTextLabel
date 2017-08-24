@@ -594,13 +594,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         
         CFRange visibleRange = getRangeToDrawForVisibleString(frame4Cal);
         
-        ///处理句尾省略号
-        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
-        if ((self.reCalculate || !self.mAStr) && needDrawString) {
-            CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
-            [self handleLastLineTruncateWithLastLineRange:lastRange attributeString:self.mAStr];
-        }
-        
         DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///已添加事件、链接的集合
         NSMutableSet * rangeSet = [NSMutableSet set];
@@ -635,6 +628,13 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
                 frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
                 visibleRange = getRangeToDrawForVisibleString(frame4Cal);
             }
+        }
+        
+        ///处理句尾省略号
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
+        if ((self.reCalculate || !self.mAStr) && needDrawString) {
+            CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
+            [self handleLastLineTruncateWithLastLineRange:lastRange attributeString:self.mAStr];
         }
         
         /***************************/
@@ -819,6 +819,7 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
     [self.activeTextArr removeAllObjects];
     [self.autoLinkArr removeAllObjects];
     _layout = [DWCoreTextLayout layoutWithCTFrame:frame convertHeight:self.bounds.size.height considerGlyphs:YES];
+    [_layout handleActiveImageAndText];
     [_layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
         CGRect deleteBounds = run.frame;
         if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
@@ -937,6 +938,9 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
 #pragma mark --- 获取点击行为 ---
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     CGPoint point = [[touches anyObject] locationInView:self];
+    DWGlyphWrapper * glyph = [_layout glyphAtPoint:point];
+    DWCTRunWrapper * run = [_layout runAtPoint:point];
+    DWCTLineWrapper * line = [_layout lineAtPoint:point];
     NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
     BOOL autoLink = [dic[@"link"] length];
     if (dic) {
@@ -1066,12 +1070,6 @@ static CGFloat widthCallBacks(void * ref) {
     CTFrameRef frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
     
     CFRange visibleRange = getRangeToDrawForVisibleString(frame4Cal);
-    
-    ///处理句尾省略号
-    if (needDrawString) {
-        CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
-        [self handleLastLineTruncateWithLastLineRange:lastRange attributeString:mAStr];
-    }
     
     ///处理插入图片
     if (needDrawString) {

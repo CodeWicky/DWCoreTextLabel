@@ -10,12 +10,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "525097918.352045"
+            timestampString = "525179628.102549"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "971"
-            endingLineNumber = "971"
-            landmarkName = "-touchesEnded:withEvent:"
+            startingLineNumber = "944"
+            endingLineNumber = "944"
+            landmarkName = "-touchesBegan:withEvent:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
