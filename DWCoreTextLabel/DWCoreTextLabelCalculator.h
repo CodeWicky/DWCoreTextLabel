@@ -123,26 +123,6 @@ CGFloat getCTFramePahtXOffset(CTFrameRef frame);
 NSMutableDictionary * getImageDic(NSMutableArray * arr,CGPoint point);
 
 /**
- 获取活动文字中包含点的字典
-
- @param arr 所有活动文字配置的数组
- @param point 当前点击的point
- @return 返回当前点击的点对应的活动文字配置
- */
-NSMutableDictionary * getActiveTextDic(NSMutableArray * arr,CGPoint point);
-
-///获取自动链接中包含点的字典
-
-/**
- 获取自动链接中包含点的字典
-
- @param arr 所有自动链接配置的数组
- @param point 当前点击的point
- @return 返回当前点击的点对应的自动链接配置
- */
-NSMutableDictionary * getAutoLinkDic(NSMutableArray * arr,CGPoint point);
-
-/**
  根据插入图片的位置对range的偏移进行校正
 
  @param range 原始range

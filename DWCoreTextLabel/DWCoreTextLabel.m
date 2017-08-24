@@ -42,12 +42,6 @@ return;\
 ///占位图字典
 @property (nonatomic ,strong) NSMutableDictionary <NSString *,NSMutableArray *>* placeHolderDic;
 
-///活跃文本数组
-@property (nonatomic ,strong) NSMutableArray * activeTextArr;
-
-///自动链接数组
-@property (nonatomic ,strong) NSMutableArray * autoLinkArr;
-
 ///活跃文本范围数组
 @property (nonatomic ,strong) NSMutableArray * textRangeArr;
 
@@ -763,8 +757,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 -(void)handleTextChange {
     self.mAStr = nil;
     [self.imageArr removeAllObjects];
-    [self.activeTextArr removeAllObjects];
-    [self.autoLinkArr removeAllObjects];
     [self.textRangeArr removeAllObjects];
     [self.arrLocationImgHasAdd removeAllObjects];
     [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
@@ -816,8 +808,6 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 #pragma mark --- 点击事件相关 ---
 ///将所有插入图片和活跃文本字典中的frame补全，重绘前调用
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame {
-    [self.activeTextArr removeAllObjects];
-    [self.autoLinkArr removeAllObjects];
     _layout = [DWCoreTextLayout layoutWithCTFrame:frame convertHeight:self.bounds.size.height considerGlyphs:YES];
     [_layout handleActiveImageAndTextWithCustomLinkRegex:self.customLinkRegex autoCheckLink:self.autoCheckLink];
     [_layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
@@ -851,14 +841,6 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
             dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
         }
     }];
-}
-
-///补全frame
-static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect deleteBounds) {
-    NSValue * boundsValue = [NSValue valueWithCGRect:deleteBounds];
-    NSMutableDictionary * dicWithFrame = [NSMutableDictionary dictionaryWithDictionary:dic];
-    dicWithFrame[@"frame"] = boundsValue;
-    [arr addObject:dicWithFrame];
 }
 
 ///自动链接事件
@@ -912,11 +894,6 @@ static inline void handleFrame(NSMutableArray * arr,NSDictionary *dic,CGRect del
         self.hasActionToDo = YES;
         return dic;
     }
-//    dic = getAutoLinkDic(self.autoLinkArr, point);
-//    if (dic) {
-//        self.hasActionToDo = YES;
-//        return dic;
-//    }
     return nil;
 }
 
@@ -1430,22 +1407,6 @@ static CGFloat widthCallBacks(void * ref) {
         _textRangeArr = [NSMutableArray array];
     }
     return _textRangeArr;
-}
-
--(NSMutableArray *)activeTextArr
-{
-    if (!_activeTextArr) {
-        _activeTextArr = [NSMutableArray array];
-    }
-    return _activeTextArr;
-}
-
--(NSMutableArray *)autoLinkArr
-{
-    if (!_autoLinkArr) {
-        _autoLinkArr = [NSMutableArray array];
-    }
-    return _autoLinkArr;
 }
 
 -(NSMutableArray *)exclusionP

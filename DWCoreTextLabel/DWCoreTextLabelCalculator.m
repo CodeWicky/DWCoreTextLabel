@@ -159,31 +159,6 @@ NSMutableDictionary * getImageDic(NSMutableArray * arr,CGPoint point) {
     return dicClicked;
 }
 
-///从对应数组中获取字典
-NSMutableDictionary * getGivenDic(CGPoint point,NSMutableArray * arr) {
-    __block NSMutableDictionary * dicClicked = nil;
-    [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-        CGRect frame = [dic[@"frame"] CGRectValue];
-        if (CGRectContainsPoint(frame, point)) {
-            if (dic[@"target"] && dic[@"SEL"]) {
-                dicClicked = dic;
-            }
-            *stop = YES;
-        }
-    }];
-    return dicClicked;
-}
-
-///获取活动文字中包含点的字典
-NSMutableDictionary * getActiveTextDic(NSMutableArray * arr,CGPoint point) {
-    return getGivenDic(point,arr);
-}
-
-///获取自动链接中包含点的字典
-NSMutableDictionary * getAutoLinkDic(NSMutableArray * arr,CGPoint point) {
-    return getGivenDic(point,arr);
-}
-
 ///矫正range偏移量
 NSRange getRangeOffset(NSRange range,NSMutableArray * arrLocationImgHasAdd) {
     __block NSRange newRange = range;
