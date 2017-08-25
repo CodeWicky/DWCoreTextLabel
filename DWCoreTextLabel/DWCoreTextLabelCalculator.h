@@ -120,7 +120,7 @@ CGFloat getCTFramePahtXOffset(CTFrameRef frame);
  @param point 当前点击的point
  @return 返回当前点击的点对应的活动图片配置
  */
-NSMutableDictionary * getImageDic(NSMutableArray * arr,CGPoint point);
+NSMutableDictionary * getImageDic(NSArray * arr,CGPoint point);
 
 /**
  根据插入图片的位置对range的偏移进行校正

@@ -36,8 +36,11 @@ return;\
 ///绘制文本
 @property (nonatomic ,strong) NSMutableAttributedString * mAStr;
 
-///绘制图片数组
-@property (nonatomic ,strong) NSMutableArray * imageArr;
+///以路径绘制图片数组
+@property (nonatomic ,strong) NSMutableArray * pathImageArr;
+
+///插入模式的图片数组
+@property (nonatomic ,strong) NSMutableArray * insertImageArr;
 
 ///占位图字典
 @property (nonatomic ,strong) NSMutableDictionary <NSString *,NSMutableArray *>* placeHolderDic;
@@ -67,7 +70,7 @@ return;\
 @property (nonatomic ,assign) BOOL hasActionToDo;
 
 ///高亮范围字典
-@property (nonatomic ,strong) NSMutableDictionary * highlightDic;
+@property (nonatomic ,strong) NSDictionary * highlightDic;
 
 ///重新计算
 @property (nonatomic ,assign) BOOL reCalculate;
@@ -121,7 +124,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self.imageArr addObject:dic];
+    [self.pathImageArr addObject:dic];
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
@@ -137,7 +140,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self handlePlaceHolderDic:dic withUrl:url editImage:nil];
+    [self handlePlaceHolderDic:dic withUrl:url insertMode:NO editImage:nil];
 }
 
 ///以路径绘制图片
@@ -146,7 +149,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self.imageArr addObject:dic];
+    [self.pathImageArr addObject:dic];
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
@@ -162,7 +165,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self handlePlaceHolderDic:dic withUrl:url editImage:^(UIImage *image) {
+    [self handlePlaceHolderDic:dic withUrl:url insertMode:NO editImage:^(UIImage *image) {
         UIBezierPath * newPath = [path copy];
         [newPath applyTransform:CGAffineTransformMakeTranslation(-newPath.bounds.origin.x, -newPath.bounds.origin.y)];
         return [DWCoreTextLabel dw_ClipImage:image withPath:newPath mode:(DWImageClipModeScaleAspectFill)];
@@ -175,7 +178,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self.imageArr addObject:dic];
+    [self.insertImageArr addObject:dic];
     [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
 }
 
@@ -191,7 +194,7 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     if (!dic) {
         return;
     }
-    [self handlePlaceHolderDic:dic withUrl:url editImage:nil];
+    [self handlePlaceHolderDic:dic withUrl:url insertMode:YES editImage:nil];
 }
 
 ///给指定范围添加响应事件
@@ -351,7 +354,7 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 }
 
 ///处理占位图的绘制及替换工作
--(void)handlePlaceHolderDic:(NSMutableDictionary *)dic withUrl:(NSString *)url editImage:(UIImage *(^)(UIImage * image))edit {
+-(void)handlePlaceHolderDic:(NSMutableDictionary *)dic withUrl:(NSString *)url insertMode:(BOOL)insertMode editImage:(UIImage *(^)(UIImage * image))edit {
     ///将配置字典添加到占位图字典中
     NSMutableArray * placeHolderArr = self.placeHolderDic[url];
     if (!placeHolderArr) {
@@ -363,7 +366,11 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
     }
     
     ///绘制占位图
-    [self.imageArr addObject:dic];
+    if (insertMode) {
+        [self.insertImageArr addObject:dic];
+    } else {
+        [self.pathImageArr addObject:dic];
+    }
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
     
     ///下载网络图片
@@ -604,14 +611,8 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         
         DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///处理插入图片
-        if (self.reCalculate && needDrawString) {
-            NSMutableArray * arrInsert = [NSMutableArray array];
-            [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-                if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
-                    [arrInsert addObject:dic];
-                }
-            }];
-            
+        if (needDrawString) {
+            NSMutableArray * arrInsert = self.insertImageArr.copy;
             if (arrInsert.count) {
                 ///富文本插入图片占位符
                 [self handleStr:self.mAStr withInsertImageArr:arrInsert arrLocationImgHasAdd:self.arrLocationImgHasAdd];
@@ -626,7 +627,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         
         ///处理句尾省略号
         DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
-        if ((self.reCalculate || !self.mAStr) && needDrawString) {
+        if (needDrawString) {
             CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
             [self handleLastLineTruncateWithLastLineRange:lastRange attributeString:self.mAStr];
         }
@@ -667,8 +668,15 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         /**********************/
         
         DRAWCANCELEDWITHREALSE(frameSetter, visibleFrame)
+        
+        
+        
+        
+        NSMutableArray * imageArr = [NSMutableArray array];
+        [imageArr addObjectsFromArray:self.pathImageArr];
+        [imageArr addObjectsFromArray:self.insertImageArr];
         ///绘制图片
-        [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+        [imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
             UIImage * image = dic[@"image"];
             CGRect frame = convertRect([dic[@"frame"] CGRectValue],self.bounds.size.height);
             CGContextDrawImage(context, frame, image.CGImage);
@@ -756,7 +764,8 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 ///文本变化相关处理
 -(void)handleTextChange {
     self.mAStr = nil;
-    [self.imageArr removeAllObjects];
+    [self.insertImageArr removeAllObjects];
+    [self.pathImageArr removeAllObjects];
     [self.textRangeArr removeAllObjects];
     [self.arrLocationImgHasAdd removeAllObjects];
     [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];
@@ -765,7 +774,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 ///处理图片环绕数组，绘制前调用
 -(void)handleImageExclusion {
     [self.imageExclusion removeAllObjects];
-    [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
+    [self.pathImageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeSurround) {
             UIBezierPath * newPath = [dic[@"drawPath"] copy];
             [self.imageExclusion addObject:newPath];
@@ -773,6 +782,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     }];
 }
 
+///处理子视图环绕数组
 -(NSArray *)handleSubviewsExclusionPaths {
     NSMutableArray * arr = [NSMutableArray array];
     [self.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
@@ -798,6 +808,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     return exclusion;
 }
 
+///校正路径并放入环绕数组
 static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
     [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
         translatePath(obj, offset);
@@ -810,37 +821,6 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame {
     _layout = [DWCoreTextLayout layoutWithCTFrame:frame convertHeight:self.bounds.size.height considerGlyphs:YES];
     [_layout handleActiveImageAndTextWithCustomLinkRegex:self.customLinkRegex autoCheckLink:self.autoCheckLink];
-    [_layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
-        CGRect deleteBounds = run.frame;
-        if (CGRectEqualToRect(deleteBounds,CGRectNull)) {///无活动范围跳过
-            return ;
-        }
-        
-        NSDictionary * attributes = run.runAttributes;
-        CTRunDelegateRef delegate = (__bridge CTRunDelegateRef)[attributes valueForKey:(id)kCTRunDelegateAttributeName];
-        
-        if (delegate == nil) {///检测图片，不是图片检测文字
-            return;
-        }
-        NSMutableDictionary * dic = CTRunDelegateGetRefCon(delegate);
-        if (![dic isKindOfClass:[NSMutableDictionary class]]) {
-            return;
-        }
-        UIImage * image = dic[@"image"];
-        if (!image) {///检测图片，不是图片跳过
-            return;
-        }
-        
-        dic[@"drawPath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
-        CGFloat padding = [dic[@"padding"] floatValue];
-        if (padding != 0) {
-            deleteBounds = CGRectInset(deleteBounds, padding, 0);
-        }
-        if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
-            dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
-            dic[@"activePath"] = [UIBezierPath bezierPathWithRect:deleteBounds];
-        }
-    }];
 }
 
 ///自动链接事件
@@ -867,7 +847,7 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 }
 
 ///处理点击高亮
--(void)handleHighlightClickWithDic:(NSMutableDictionary *)dic isLink:(BOOL)link {
+-(void)handleHighlightClickWithDic:(NSDictionary *)dic isLink:(BOOL)link {
     self.highlightDic = dic;
     if (!link && self.activeTextHighlightAttributes) {
         self.textClicked = YES;
@@ -881,15 +861,15 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 }
 
 ///处理具有响应事件状态
--(NSMutableDictionary *)handleHasActionStatusWithPoint:(CGPoint)point {
+-(NSDictionary *)handleHasActionStatusWithPoint:(CGPoint)point {
     self.hasActionToDo = NO;
-    NSMutableDictionary * dic = getImageDic(self.imageArr, point);
+    NSDictionary * dic = [self handleHasActionImageWithPoint:point];
     if (dic) {
         self.hasActionToDo = YES;
         return nil;
     }
     DWCTRunWrapper * run = [_layout runAtPoint:point];
-    dic = run.activeAttributes.mutableCopy;
+    dic = run.activeAttributes;
     if (dic) {
         self.hasActionToDo = YES;
         return dic;
@@ -897,13 +877,19 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
     return nil;
 }
 
+///返回具有响应事件的图片配置字典
+-(NSDictionary *)handleHasActionImageWithPoint:(CGPoint)point {
+    NSMutableDictionary * dic = getImageDic(_layout.activeImageConfigs, point);
+    if (!dic) {
+        dic = getImageDic(self.pathImageArr, point);
+    }
+    return dic;
+}
+
 #pragma mark --- 获取点击行为 ---
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     CGPoint point = [[touches anyObject] locationInView:self];
-    DWGlyphWrapper * glyph = [_layout glyphAtPoint:point];
-    DWCTRunWrapper * run = [_layout runAtPoint:point];
-    DWCTLineWrapper * line = [_layout lineAtPoint:point];
-    NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
+    NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
     BOOL autoLink = [dic[@"link"] length];
     if (dic) {
         [self handleHighlightClickWithDic:dic isLink:autoLink];
@@ -915,7 +901,7 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 -(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     if (self.hasActionToDo) {
         CGPoint point = [[touches anyObject] locationInView:self];
-        NSMutableDictionary * dic = [self handleHasActionStatusWithPoint:point];
+        NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
         if (!self.hasActionToDo || ![self.highlightDic isEqualToDictionary:dic]) {
             if (self.textClicked) {
                 self.textClicked = NO;
@@ -935,7 +921,7 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 -(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     if (self.hasActionToDo) {
         CGPoint point = [[touches anyObject] locationInView:self];
-        NSMutableDictionary * dic = getImageDic(self.imageArr,point);
+        NSDictionary * dic = [self handleHasActionImageWithPoint:point];
         if (dic) {
             [self handleClickWithDic:dic];
             return;
@@ -1035,13 +1021,7 @@ static CGFloat widthCallBacks(void * ref) {
     
     ///处理插入图片
     if (needDrawString) {
-        NSMutableArray * arrInsert = [NSMutableArray array];
-        [self.imageArr enumerateObjectsUsingBlock:^(NSDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
-            if ([dic[@"drawMode"] integerValue] == DWTextImageDrawModeInsert) {
-                [arrInsert addObject:dic];
-            }
-        }];
-        
+        NSMutableArray * arrInsert = self.insertImageArr.copy;
         if (arrInsert.count) {
             ///富文本插入图片占位符
             [self handleStr:mAStr withInsertImageArr:arrInsert arrLocationImgHasAdd:[NSMutableArray array]];
@@ -1159,7 +1139,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setTextColor:(UIColor *)textColor {
     if (!CGColorEqualToColor(_textColor.CGColor,textColor.CGColor)) {
         _textColor = textColor;
-        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1247,18 +1227,18 @@ static CGFloat widthCallBacks(void * ref) {
 #pragma mark ---链接属性setter、getter---
 -(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes {
     _activeTextAttributes = activeTextAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setActiveTextHighlightAttributes:(NSDictionary *)activeTextHighlightAttributes {
     _activeTextHighlightAttributes = activeTextHighlightAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(void)setNaturalNumAttributes:(NSDictionary *)naturalNumAttributes {
     _naturalNumAttributes = naturalNumAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1269,7 +1249,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setNaturalNumHighlightAttributes:(NSDictionary *)naturalNumHighlightAttributes {
     _naturalNumHighlightAttributes = naturalNumHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1280,7 +1260,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setPhoneNoAttributes:(NSDictionary *)phoneNoAttributes {
     _phoneNoAttributes = phoneNoAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1291,7 +1271,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setPhoneNoHighlightAttributes:(NSDictionary *)phoneNoHighlightAttributes {
     _phoneNoHighlightAttributes = phoneNoHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1302,7 +1282,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setURLAttributes:(NSDictionary *)URLAttributes {
     _URLAttributes = URLAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1313,7 +1293,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setURLHighlightAttributes:(NSDictionary *)URLHighlightAttributes {
     _URLHighlightAttributes = URLHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1325,7 +1305,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setEmailAttributes:(NSDictionary *)emailAttributes {
     _emailAttributes = emailAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1336,7 +1316,7 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setEmailHighlightAttributes:(NSDictionary *)emailHighlightAttributes {
     _emailHighlightAttributes = emailHighlightAttributes;
     if (self.autoCheckLink) {
-        [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+        [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
 
@@ -1346,7 +1326,7 @@ static CGFloat widthCallBacks(void * ref) {
 
 -(void)setCustomLinkAttributes:(NSDictionary *)customLinkAttributes {
     _customLinkAttributes = customLinkAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(NSDictionary *)customLinkAttributes {
@@ -1355,7 +1335,7 @@ static CGFloat widthCallBacks(void * ref) {
 
 -(void)setCustomLinkHighlightAttributes:(NSDictionary *)customLinkHighlightAttributes {
     _customLinkHighlightAttributes = customLinkHighlightAttributes;
-    [self handleAutoRedrawWithRecalculate:NO reCheck:NO reDraw:self.autoRedraw];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
 }
 
 -(NSDictionary *)customLinkHighlightAttributes {
@@ -1370,12 +1350,18 @@ static CGFloat widthCallBacks(void * ref) {
 }
 
 #pragma mark ---中间容器属性setter、getter---
--(NSMutableArray *)imageArr
-{
-    if (!_imageArr) {
-        _imageArr = [NSMutableArray array];
+-(NSMutableArray *)pathImageArr {
+    if (!_pathImageArr) {
+        _pathImageArr = [NSMutableArray array];
     }
-    return _imageArr;
+    return _pathImageArr;
+}
+
+-(NSMutableArray *)insertImageArr {
+    if (!_insertImageArr) {
+        _insertImageArr = [NSMutableArray array];
+    }
+    return _insertImageArr;
 }
     
 -(NSMutableDictionary<NSString *,NSMutableArray *> *)placeHolderDic {

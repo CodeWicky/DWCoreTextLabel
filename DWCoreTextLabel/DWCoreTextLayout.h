@@ -107,7 +107,9 @@
 
 
 /**
- CoreText布局计算类
+ CoreText绘制布局计算类
+ 
+ 注：此处Layout类仅负责处理由富文本直接绘制的元素。包含文字、链接及插入到字符串的图片。
  */
 @interface DWCoreTextLayout : NSObject
 
@@ -116,6 +118,9 @@
 
 ///绘制的最大位置
 @property (nonatomic ,assign ,readonly) NSUInteger maxLoc;
+
+///具有响应事件的图片的配置数组（Layout仅处理插入图片的图片配置数组，对于Path绘制的不处理）
+@property (nonatomic ,strong ,readonly) NSArray * activeImageConfigs;
 
 
 /**

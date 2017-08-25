@@ -215,9 +215,14 @@
 }
 
 -(void)handleActiveImageAndTextWithCustomLinkRegex:(NSString *)customLinkRegex autoCheckLink:(BOOL)autoCheckLink {
+    NSMutableArray * arr = @[].mutableCopy;
     [self enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
         [run handleActiveRunWithCustomLinkRegex:customLinkRegex autoCheckLink:autoCheckLink];
+        if (run.isImage && run.activeAttributes[@"activePath"]) {
+            [arr addObject:run.activeAttributes];
+        }
     }];
+    _activeImageConfigs = arr.copy;
 }
 
 -(void)enumerateCTRunUsingBlock:(void (^)(DWCTRunWrapper *, BOOL *))handler {

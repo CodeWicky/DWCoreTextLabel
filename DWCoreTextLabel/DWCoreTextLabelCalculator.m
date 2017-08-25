@@ -145,7 +145,7 @@ CGFloat getCTFramePahtXOffset(CTFrameRef frame) {
 }
 
 ///获取活动图片中包含点的字典
-NSMutableDictionary * getImageDic(NSMutableArray * arr,CGPoint point) {
+NSMutableDictionary * getImageDic(NSArray * arr,CGPoint point) {
     __block NSMutableDictionary * dicClicked = nil;
     [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         UIBezierPath * path = dic[@"activePath"];
