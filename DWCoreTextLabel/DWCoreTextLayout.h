@@ -13,10 +13,13 @@
 #import <Foundation/Foundation.h>
 #import <CoreText/CoreText.h>
 
+@class DWCTRunWrapper;
 /**
  字形包装类
  */
 @interface DWGlyphWrapper : NSObject
+
+@property (nonatomic ,weak ,readonly) DWCTRunWrapper * run;
 
 ///字形开始x坐标
 @property (nonatomic ,assign) CGFloat startXCrd;
@@ -29,11 +32,14 @@
 
 @end
 
-
+@class DWCTLineWrapper;
 /**
  CTRun包装类
  */
 @interface DWCTRunWrapper : NSObject
+
+///所属Line
+@property (nonatomic ,weak ,readonly) DWCTLineWrapper * line;
 
 ///对应CTRun
 @property (nonatomic ,assign ,readonly) CTRunRef ctRun;
@@ -43,6 +49,12 @@
 
 ///对应的屏幕尺寸
 @property (nonatomic ,assign ,readonly) CGRect frame;
+
+///上一个CTRun
+@property (nonatomic ,weak ,readonly) DWCTRunWrapper * previousRun;
+
+///下一个CTRun
+@property (nonatomic ,weak ,readonly) DWCTRunWrapper * nextRun;
 
 ///对应的CTRun的属性
 @property (nonatomic ,strong ,readonly) NSDictionary * runAttributes;
@@ -152,7 +164,7 @@
 -(void)enumerateCTRunUsingBlock:(void(^)(DWCTRunWrapper * run,BOOL * stop))handler;
 
 /***
- 返回CTLine、CTRun或Glyph
+ 返回CTLine、CTRun、Glyph或x坐标
 
  注：
  loc为对应角标
@@ -164,5 +176,7 @@
 -(DWCTRunWrapper *)runAtPoint:(CGPoint)point;
 -(DWGlyphWrapper *)glyphAtLocation:(NSUInteger)loc;
 -(DWGlyphWrapper *)glyphAtPoint:(CGPoint)point;
+-(CGFloat)xCrdAtLocation:(NSUInteger)loc;
+-(CGFloat)xCrdAtPoint:(CGPoint)point;
 
 @end

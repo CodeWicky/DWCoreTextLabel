@@ -138,6 +138,7 @@
  修改处理末尾省略号位置，防止插入图片后末尾省略号失效，并去除-sizeThatFits:中对末尾省略号的处理，目前认为其不影响实际尺寸计算
  修改活跃文字、自动链接响应方式。修复设置高亮状态、未设置普通状态时点击后不恢复的bug
  修复设置链接属性字号不改变bug，图片响应方式改造完成
+ 删除图片API添加完成，父对象弱引用改造完成
  
  */
 
@@ -335,6 +336,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  以frame绘制矩形图片
  
  image          将要绘制的图片
+ imageID        图片的唯一标示，用于删除图片
  url            网络图片的地址
  placeHolder    网络图片下载完成之前的占位图
  frame          绘制图片的尺寸
@@ -343,16 +345,17 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  target         可选参数，与target配套使用
  selector       为图片添加点击事件，响应区域为图片实际绘制区域
  */
--(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImage:(UIImage *)image withImageID:(NSString *)imageID atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
--(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
--(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  以path绘制不规则形状图片
  
- image          将要绘制的图片
+ image          将要绘制的图片 
+ imageID        图片的唯一标示，用于删除图片
  url            网络图片的地址
  placeHolder    网络图片下载完成之前的占位图
  path           绘制图片的路径，先以path对图片进行剪裁，后绘制
@@ -365,16 +368,17 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  1.将自动按照path路径形状剪裁图片，图片无需事先处理
  2.自动剪裁图片时按照path的形状剪裁，与origin无关。
  */
--(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImage:(UIImage *)image withImageID:(NSString *)imageID path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
--(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
--(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector;
 
 /**
  插入图片
  
  image          将要绘制的图片
+ imageID        图片的唯一标示，用于删除图片
  url            网络图片的地址
  placeHolder    网络图片下载完成之前的占位图
  size           绘制图片的大小
@@ -389,11 +393,19 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  2.插入图片的位置不影响为范围内文字添加点击事件，无需另做考虑
  3.由于CoreText计算原理导致，有些情况下插入大图绘制时由于绘制区域无法完整绘制大图导致绘制错误，插入位置后字符串的会无法显示。故绘制大图建议采用dw_DrawImage系列API进行绘制。插入系列更适合聊天文字中穿插表情等相似情景。
  */
--(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+-(void)dw_InsertImage:(UIImage *)image withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
--(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+-(void)dw_InsertImageWithUrl:(NSString *)url withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
 
--(void)dw_InsertImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+-(void)dw_InsertImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector;
+
+
+/**
+ 删除图片
+
+ @param imageID 删除图片的图片标识
+ */
+-(void)dw_RemoveImageByID:(NSString *)imageID;
 
 /**
  为指定区域文本添加点击事件

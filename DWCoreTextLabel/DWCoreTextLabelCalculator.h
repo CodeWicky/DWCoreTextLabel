@@ -13,8 +13,19 @@
 ///安全释放
 #define CFSAFERELEASE(a)\
 do {\
-if(a != NULL) {\
+if(a) {\
 CFRelease(a);\
+a = NULL;\
+}\
+} while(0);
+
+///安全赋值
+#define CFSAFESETVALUEA2B(a,b)\
+do {\
+CFSAFERELEASE(b)\
+if (a) {\
+CFRetain(a);\
+b = a;\
 }\
 } while(0);
 

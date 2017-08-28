@@ -119,8 +119,8 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 #pragma mark --- 接口方法 ---
 
 ///以指定模式绘制图片
--(void)dw_DrawImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    NSMutableDictionary * dic = [self configImage:image atFrame:frame margin:margin drawMode:mode target:target selector:selector];
+-(void)dw_DrawImage:(UIImage *)image withImageID:(NSString *)imageID atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    NSMutableDictionary * dic = [self configImage:image withImageID:imageID atFrame:frame margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -128,15 +128,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
--(void)dw_DrawImageWithUrl:(NSString *)url atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    [self dw_DrawImageWithUrl:url placeHolder:nil atFrame:frame margin:margin drawMode:mode target:target selector:selector];
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    [self dw_DrawImageWithUrl:url withImageID:imageID placeHolder:nil atFrame:frame margin:margin drawMode:mode target:target selector:selector];
 }
     
--(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
     if (!placeHolder) {
         placeHolder = [UIImage new];
     }
-    NSMutableDictionary * dic = [self configImage:placeHolder atFrame:frame margin:margin drawMode:mode target:target selector:selector];
+    NSMutableDictionary * dic = [self configImage:placeHolder withImageID:imageID atFrame:frame margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -144,8 +144,8 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///以路径绘制图片
--(void)dw_DrawImage:(UIImage *)image WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    NSMutableDictionary * dic = [self configImage:image withPath:path margin:margin drawMode:mode target:target selector:selector];
+-(void)dw_DrawImage:(UIImage *)image withImageID:(NSString *)imageID path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    NSMutableDictionary * dic = [self configImage:image withImageID:imageID path:path margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -153,15 +153,15 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleAutoRedrawWithRecalculate:YES reCheck:NO];
 }
 
--(void)dw_DrawImageWithUrl:(NSString *)url WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
-    [self dw_DrawImageWithUrl:url placeHolder:nil WithPath:path margin:margin drawMode:mode target:self selector:selector];
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+    [self dw_DrawImageWithUrl:url withImageID:imageID placeHolder:nil path:path margin:margin drawMode:mode target:self selector:selector];
 }
     
--(void)dw_DrawImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder WithPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+-(void)dw_DrawImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
     if (!placeHolder) {
         placeHolder = [UIImage new];
     }
-    NSMutableDictionary * dic = [self configImage:placeHolder withPath:path margin:margin drawMode:mode target:target selector:selector];
+    NSMutableDictionary * dic = [self configImage:placeHolder withImageID:imageID path:path margin:margin drawMode:mode target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -173,8 +173,8 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 }
 
 ///在字符串指定位置插入图片
--(void)dw_InsertImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
-    NSMutableDictionary * dic = [self configImage:image size:size padding:padding descent:descent atLocation:location target:target selector:selector];
+-(void)dw_InsertImage:(UIImage *)image withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+    NSMutableDictionary * dic = [self configImage:image withImageID:imageID size:size padding:padding descent:descent atLocation:location target:target selector:selector];
     if (!dic) {
         return;
     }
@@ -182,19 +182,41 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
     [self handleAutoRedrawWithRecalculate:YES reCheck:YES];
 }
 
--(void)dw_InsertImageWithUrl:(NSString *)url size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
-    [self dw_InsertImageWithUrl:url placeHolder:nil size:size padding:padding descent:descent atLocation:location target:self selector:selector];
+-(void)dw_InsertImageWithUrl:(NSString *)url withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+    [self dw_InsertImageWithUrl:url withImageID:imageID placeHolder:nil size:size padding:padding descent:descent atLocation:location target:self selector:selector];
 }
     
--(void)dw_InsertImageWithUrl:(NSString *)url placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+-(void)dw_InsertImageWithUrl:(NSString *)url withImageID:(NSString *)imageID placeHolder:(UIImage *)placeHolder size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
     if (!placeHolder) {
         placeHolder = [UIImage new];
     }
-    NSMutableDictionary * dic = [self configImage:placeHolder size:size padding:padding descent:descent atLocation:location target:target selector:selector];
+    NSMutableDictionary * dic = [self configImage:placeHolder withImageID:imageID size:size padding:padding descent:descent atLocation:location target:target selector:selector];
     if (!dic) {
         return;
     }
     [self handlePlaceHolderDic:dic withUrl:url insertMode:YES editImage:nil];
+}
+
+-(void)dw_RemoveImageByID:(NSString *)imageID {
+    if (!imageID.length) {
+        return;
+    }
+    [self handleDeleteImageConfigArr:self.insertImageArr withImageID:imageID];
+    [self handleDeleteImageConfigArr:self.pathImageArr withImageID:imageID];
+    [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:YES];
+}
+
+-(void)handleDeleteImageConfigArr:(NSMutableArray *)configArr withImageID:(NSString *)imageID {
+    NSInteger count = configArr.count;
+    for (int i = 0; i < count; i ++) {
+        NSMutableDictionary * dic = configArr[i];
+        NSString * ID = dic[@"imageID"];
+        if ([ID isEqualToString:imageID]) {
+            [configArr removeObject:dic];
+            i --;
+            count --;
+        }
+    }
 }
 
 ///给指定范围添加响应事件
@@ -300,7 +322,7 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 }
 
 ///根据三种类型获取配置字典
--(NSMutableDictionary *)configImage:(UIImage *)image atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+-(NSMutableDictionary *)configImage:(UIImage *)image withImageID:(NSString *)imageID atFrame:(CGRect)frame margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
     if (!image) {
         return nil;
     }
@@ -315,10 +337,13 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
     }
+    if (imageID.length) {
+        [dic setValue:imageID forKey:@"imageID"];
+    }
     return dic;
 }
 
--(NSMutableDictionary *)configImage:(UIImage *)image withPath:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
+-(NSMutableDictionary *)configImage:(UIImage *)image withImageID:(NSString *)imageID path:(UIBezierPath *)path margin:(CGFloat)margin drawMode:(DWTextImageDrawMode)mode target:(id)target selector:(SEL)selector {
     if (!image) {
         return nil;
     }
@@ -335,10 +360,13 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
     }
+    if (imageID.length) {
+        [dic setValue:imageID forKey:@"imageID"];
+    }
     return dic;
 }
 
--(NSMutableDictionary *)configImage:(UIImage *)image size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+-(NSMutableDictionary *)configImage:(UIImage *)image withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
     if (!image) {
         return nil;
     }
@@ -349,6 +377,9 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
     if (target && selector) {
         [dic setValue:target forKey:@"target"];
         [dic setValue:NSStringFromSelector(selector) forKey:@"SEL"];
+    }
+    if (imageID.length) {
+        [dic setValue:imageID forKey:@"imageID"];
     }
     return dic;
 }
@@ -765,7 +796,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 -(void)handleTextChange {
     self.mAStr = nil;
     [self.insertImageArr removeAllObjects];
-    [self.pathImageArr removeAllObjects];
     [self.textRangeArr removeAllObjects];
     [self.arrLocationImgHasAdd removeAllObjects];
     [self handleAutoRedrawWithRecalculate:YES reCheck:YES reDraw:self.autoRedraw];

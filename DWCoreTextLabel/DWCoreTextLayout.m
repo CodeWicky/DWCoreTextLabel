@@ -20,6 +20,18 @@
     return self;
 }
 
+-(void)configRun:(DWCTRunWrapper *)run {
+    _run = run;
+}
+
+-(NSString *)debugDescription {
+    NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tindex:\t%lu",self.index]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartXCrd:\t%.2f",self.startXCrd]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendXCrd:\t%.2f\n}",self.endXCrd]];
+    return string;
+}
+
 @end
 
 @implementation DWCTRunWrapper
@@ -31,7 +43,7 @@
 
 -(instancetype)initWithCTRun:(CTRunRef)ctRun {
     if (self = [super init]) {
-        _ctRun = ctRun;
+        CFSAFESETVALUEA2B(ctRun, _ctRun)
         _runAttributes = (NSDictionary *)CTRunGetAttributes(ctRun);
         CFRange range = CTRunGetStringRange(_ctRun);
         _startIndex = range.location;
@@ -45,6 +57,19 @@
     _frame = convertRect(_runRect, height);
 }
 
+-(void)configLine:(DWCTLineWrapper *)line {
+    _line = line;
+}
+
+-(void)configPreviousRun:(DWCTRunWrapper *)preRun {
+    _previousRun = preRun;
+    [preRun configNextRun:self];
+}
+
+-(void)configNextRun:(DWCTRunWrapper *)nextRun {
+    _nextRun = nextRun;
+}
+
 -(void)handleGlyphsWithCTFrame:(CTFrameRef)ctFrame CTLine:(CTLineRef)ctLine origin:(CGPoint)origin {
     NSUInteger count = CTRunGetGlyphCount(_ctRun);
     NSMutableArray * temp = @[].mutableCopy;
@@ -54,6 +79,7 @@
         CGFloat startXCrd = origin.x + CTLineGetOffsetForStringIndex(ctLine, index, NULL) + offset;
         CGFloat endXCrd = origin.x + CTLineGetOffsetForStringIndex(ctLine, index + 1, NULL) + offset;
         DWGlyphWrapper * wrapper = [[DWGlyphWrapper alloc] initWithIndex:index startXCrd:startXCrd endXCrd:endXCrd];
+        [wrapper configRun:self];
         [temp addObject:wrapper];
     }
     _glyphs = temp.copy;
@@ -105,13 +131,17 @@
     }
 }
 
--(NSString *)description {
+-(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartIndex:\t%lu",self.startIndex]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendIndex:\t%lu",self.endIndex]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@\n}",self.glyphs]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tglyphs:\t%@\n}",self.glyphs]];
     return string;
+}
+
+-(void)dealloc {
+    CFSAFERELEASE(_ctRun)
 }
 
 @end
@@ -125,7 +155,7 @@
 
 -(instancetype)initWithCTLine:(CTLineRef)ctLine {
     if (self = [super init]) {
-        _ctLine = ctLine;
+        CFSAFESETVALUEA2B(ctLine, _ctLine)
         CFRange range = CTLineGetStringRange(ctLine);
         _startIndex = range.location;
         _endIndex = range.location + range.length;
@@ -149,13 +179,17 @@
     CFArrayRef runs = CTLineGetGlyphRuns(_ctLine);
     NSUInteger count = CFArrayGetCount(runs);
     NSMutableArray * runsA = @[].mutableCopy;
+    DWCTRunWrapper * preRun = nil;
     for (int i = 0; i < count; i ++) {
         CTRunRef run = CFArrayGetValueAtIndex(runs, i);
         DWCTRunWrapper * runWrapper = [DWCTRunWrapper createWrapperForCTRun:run];
         [runWrapper configWithCTFrame:ctFrame ctLine:_ctLine origin:_lineOrigin convertHeight:height];
+        [runWrapper configLine:self];
+        [runWrapper configPreviousRun:preRun];
         if (considerGlyphs) {
             [runWrapper handleGlyphsWithCTFrame:ctFrame CTLine:_ctLine origin:_lineOrigin];
         }
+        preRun = runWrapper;
         [runsA addObject:runWrapper];
     }
     _runs = runsA.copy;
@@ -170,11 +204,13 @@
     _nextLine = nextLine;
 }
 
--(NSString *)description {
+-(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\trow:\t%lu",self.row]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@\n}",self.runs]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@",self.runs]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tpreviousLine:\t%@",self.previousLine]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tnextLine:\t%@\n}",self.nextLine]];
     return string;
 }
 
@@ -293,6 +329,14 @@
     return run.glyphs[idx];
 }
 
+-(CGFloat)xCrdAtLocation:(NSUInteger)loc {
+    DWGlyphWrapper * glyph = [self glyphAtLocation:loc];
+    if (!glyph) {
+        return MAXFLOAT;
+    }
+    return glyph.startXCrd;
+}
+
 -(DWCTLineWrapper *)lineAtPoint:(CGPoint)point {
     __block DWCTLineWrapper * line = nil;
     [self binarySearchInContainer:self.lines condition:^NSComparisonResult(DWCTLineWrapper * obj, NSUInteger currentIdx, BOOL *stop) {
@@ -344,7 +388,13 @@
     return glyph;
 }
 
-
+-(CGFloat)xCrdAtPoint:(CGPoint)point {
+    DWGlyphWrapper * glyph = [self glyphAtPoint:point];
+    if (!glyph) {
+        return MAXFLOAT;
+    }
+    return DWClosestSide(point.x, glyph.startXCrd, glyph.endXCrd);
+}
 
 /**
  二分法查找数组中指定元素
@@ -419,9 +469,7 @@ static inline BOOL DWRectFixContainsPoint(CGRect rect,CGPoint point) {
 
 static inline NSComparisonResult DWNumBetweenAB(CGFloat num,CGFloat a,CGFloat b) {
     if (a > b) {
-        CGFloat temp = a;
-        a = b;
-        b = temp;
+        DWSwapAB(&a, &b);
     }
     if (num < a) {
         return NSOrderedAscending;
@@ -438,5 +486,23 @@ static inline NSComparisonResult DWPointInRectV(CGPoint point,CGRect rect) {
 
 static inline NSComparisonResult DWPointInRectH(CGPoint point,CGRect rect) {
     return DWNumBetweenAB(point.x, CGRectGetMinX(rect), CGRectGetMaxX(rect));
+}
+
+static inline CGFloat DWClosestSide(CGFloat xCrd,CGFloat left,CGFloat right) {
+    if (right < left) {
+        DWSwapAB(&left, &right);
+    }
+    CGFloat mid = (left + right) / 2;
+    if (xCrd > mid) {
+        return right;
+    } else {
+        return left;
+    }
+}
+
+static inline void DWSwapAB(CGFloat *a,CGFloat *b) {
+    CGFloat temp = *a;
+    *a = *b;
+    *b = temp;
 }
 @end
