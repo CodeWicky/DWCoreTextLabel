@@ -29,8 +29,8 @@ b = a;\
 }\
 } while(0);
 
-#pragma mark --- 获取相关数据 ---
 
+#pragma mark --- 获取相关数据 ---
 /**
  获取当前需要绘制的文本
 
@@ -105,7 +105,6 @@ UIBezierPath * getImageAcitvePath(UIBezierPath * path,CGFloat margin);
  */
 CGRect getCTRunBounds(CTFrameRef frame,CTLineRef line,CGPoint origin,CTRunRef run);
 
-
 /**
  获取尺寸相对于Frame的路径校正后的尺寸
 
@@ -114,7 +113,6 @@ CGRect getCTRunBounds(CTFrameRef frame,CTLineRef line,CGPoint origin,CTRunRef ru
  @return 校正后尺寸
  */
 CGRect getRectWithCTFramePathOffset(CGRect rect,CTFrameRef frame);
-
 
 /**
  获取Frame的路径的横坐标偏移
@@ -160,8 +158,8 @@ NSArray * getRangeExcept(NSRange targetRange,NSRange exceptRange);
  */
 NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds);
 
-#pragma mark ---镜像转换方法---
 
+#pragma mark --- 镜像转换方法 ---
 /**
  获取镜像path
 
@@ -179,7 +177,6 @@ void convertPath(UIBezierPath * path,CGRect bounds);
  */
 CGRect convertRect(CGRect rect,CGFloat height);
 
-
 /**
  平移路径
 
@@ -187,3 +184,110 @@ CGRect convertRect(CGRect rect,CGFloat height);
  @param offsetY 纵向平移距离
  */
 void translatePath(UIBezierPath * path,CGFloat offsetY);
+
+
+#pragma mark --- 比较方法 ---
+/**
+ 返回给定数在所给范围中的相对位置
+ 
+ @param num 给定数
+ @param a 范围A
+ @param b 范围B
+ @return 返回相对位置
+ 
+ 注：
+ 当num在数轴上位于[a,b]左侧时返回NSOrderedAscending，右侧返回NSOrderedDescending，包含关系返回NSOrderedSame
+ */
+NSComparisonResult DWNumBetweenAB(CGFloat num,CGFloat a,CGFloat b);
+
+
+#pragma mark --- 空间位置关系方法 ---
+/**
+ 返指给定点在给定尺寸中的竖直位置关系
+ 
+ @param point 指定点
+ @param rect 给定尺寸
+ @return 相对竖直位置
+ 
+ 注：
+ 返回结果定义同DWNumBetweenAB()
+ */
+NSComparisonResult DWPointInRectV(CGPoint point,CGRect rect);
+
+/**
+ 返指给定点在给定尺寸中的水平位置关系
+ 
+ @param point 指定点
+ @param rect 给定尺寸
+ @return 相对水平位置
+ 
+ 注：
+ 返回结果定义同DWNumBetweenAB()
+ */
+NSComparisonResult DWPointInRectH(CGPoint point,CGRect rect);
+
+/**
+ 返回距离指定坐标较近的一侧的坐标值
+ 
+ @param xCrd 指定坐标
+ @param left 左侧坐标
+ @param right 右侧坐标
+ @return 较近一侧的坐标
+ 
+ 注：
+ 当左右坐标传入空间位置矛盾时会自动交换左右坐标
+ */
+CGFloat DWClosestSide(CGFloat xCrd,CGFloat left,CGFloat right);
+
+/**
+ 返回给定点是否在给定尺寸的修正范围内
+
+ @param rect 给定尺寸
+ @param point 给定点
+ @return 是否包含
+ */
+BOOL DWRectFixContainsPoint(CGRect rect,CGPoint point);
+
+/**
+ 比较指定坐标在给定尺寸中的位置
+ 
+ @param xCrd 指定坐标
+ @param rect 给定尺寸
+ @return 相对位置
+ 
+ 注：
+ 返回结果定义同DWNumBetweenAB()
+ */
+NSComparisonResult DWCompareXCrdWithRect(CGFloat xCrd,CGRect rect);
+
+
+#pragma mark --- 尺寸修正方法 ---
+/**
+ 缩短CGRect至指定坐标
+ 
+ @param rect 原始尺寸
+ @param xCrd 指定x坐标
+ @param backward 是否为向后模式
+ @return 缩短后的尺寸
+ 
+ 注:
+ 向后模式及保留指定x坐标右侧区域，反之亦然
+ */
+CGRect DWShortenRectToXCrd(CGRect rect,CGFloat xCrd,BOOL backward);
+
+/**
+ 延长尺寸至指定坐标
+ 
+ @param rect 原始尺寸
+ @param xCrd 指定坐标
+ @return 延长后的尺寸
+ */
+CGRect DWLengthenRectToXCrd(CGRect rect,CGFloat xCrd);
+
+
+#pragma mark --- 交换对象方法 ---
+///交换两个浮点数
+void DWSwapfAB(CGFloat *a,CGFloat *b);
+
+///交换两个对象
+void DWSwapoAB(id a,id b);

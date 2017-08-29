@@ -205,7 +205,8 @@ NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds) {
     return [NSDictionary dictionaryWithObjectsAndKeys:pathsArray,kCTFrameClippingPathsAttributeName, nil];
 }
 
-#pragma mark ---镜像转换方法---
+
+#pragma mark --- 镜像转换方法 ---
 ///获取镜像path
 void convertPath(UIBezierPath * path,CGRect bounds) {
     [path applyTransform:CGAffineTransformMakeScale(1, -1)];
@@ -229,3 +230,126 @@ void translatePath(UIBezierPath * path,CGFloat offsetY) {
 }
 
 
+#pragma mark --- 比较方法 ---
+///返回给定数在所给范围中的相对位置
+NSComparisonResult DWNumBetweenAB(CGFloat num,CGFloat a,CGFloat b) {
+    if (a > b) {
+        DWSwapfAB(&a, &b);
+    }
+    if (num < a) {
+        return NSOrderedAscending;
+    } else if (num > b) {
+        return NSOrderedDescending;
+    } else {
+        return NSOrderedSame;
+    }
+}
+
+
+#pragma mark --- 空间位置关系方法 ---
+///返指给定点在给定尺寸中的竖直位置关系
+NSComparisonResult DWPointInRectV(CGPoint point,CGRect rect) {
+    return DWNumBetweenAB(point.y, CGRectGetMinY(rect), CGRectGetMaxY(rect));
+}
+
+///返指给定点在给定尺寸中的水平位置关系
+NSComparisonResult DWPointInRectH(CGPoint point,CGRect rect) {
+    return DWNumBetweenAB(point.x, CGRectGetMinX(rect), CGRectGetMaxX(rect));
+}
+
+///返回距离指定坐标较近的一侧的坐标值
+CGFloat DWClosestSide(CGFloat xCrd,CGFloat left,CGFloat right) {
+    if (right < left) {
+        DWSwapfAB(&left, &right);
+    }
+    CGFloat mid = (left + right) / 2;
+    if (xCrd > mid) {
+        return right;
+    } else {
+        return left;
+    }
+}
+
+///返回给定点是否在给定尺寸的修正范围内
+BOOL DWRectFixContainsPoint(CGRect rect,CGPoint point) {
+    rect = CGRectInset(rect, 0, -0.25);
+    return CGRectContainsPoint(rect, point);
+}
+
+///比较指定坐标在给定尺寸中的位置
+NSComparisonResult DWCompareXCrdWithRect(CGFloat xCrd,CGRect rect) {
+    CGFloat min = CGRectGetMinX(rect);
+    CGFloat max = CGRectGetMaxX(rect);
+    return DWNumBetweenAB(xCrd, min, max);
+}
+
+
+#pragma mark --- 尺寸修正方法 ---
+///修正尺寸至指定坐标
+CGRect DWFixRectToXCrd(CGRect rect,CGFloat xCrd,NSComparisonResult result,BOOL backward) {
+    if (CGRectEqualToRect(rect, CGRectZero)) {
+        return CGRectZero;
+    }
+    if (result == NSOrderedDescending) {
+        CGFloat width = xCrd - rect.origin.x;
+        rect.size.width = width;
+    } else if (result == NSOrderedAscending) {
+        rect.origin.x = xCrd;
+    } else if (backward) {
+        rect.origin.x = xCrd;
+    } else {
+        CGFloat width = xCrd - rect.origin.x;
+        rect.size.width = width;
+    }
+    if (CGRectGetWidth(rect) <= 0) {
+        return CGRectZero;
+    }
+    return rect;
+}
+
+///缩短CGRect至指定坐标
+CGRect DWShortenRectToXCrd(CGRect rect,CGFloat xCrd,BOOL backward) {
+    if (!backward && xCrd == CGRectGetMaxX(rect)) {
+        return rect;
+    }
+    if (backward && xCrd == CGRectGetMinX(rect)) {
+        return rect;
+    }
+    NSComparisonResult result = DWCompareXCrdWithRect(xCrd, rect);
+    if (result == NSOrderedSame) {
+        return DWFixRectToXCrd(rect, xCrd, result, backward);
+    } else {
+        return CGRectZero;
+    }
+}
+
+///延长尺寸至指定坐标
+CGRect DWLengthenRectToXCrd(CGRect rect,CGFloat xCrd) {
+    BOOL backward = YES;
+    NSComparisonResult result = DWCompareXCrdWithRect(xCrd, rect);
+    if (result == NSOrderedSame) {
+        if (xCrd != CGRectGetMaxX(rect) && xCrd != CGRectGetMinX(rect)) {
+            return CGRectZero;
+        }
+        return rect;
+    } else if (result == NSOrderedAscending) {
+        backward = NO;
+    }
+    return DWFixRectToXCrd(rect, xCrd, result, backward);
+}
+
+
+#pragma mark --- 交换对象方法 ---
+///交换浮点数
+void DWSwapfAB(CGFloat *a,CGFloat *b) {
+    CGFloat temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+///交换对象
+void DWSwapoAB(id a,id b) {
+    id temp = a;
+    a = b;
+    b = temp;
+}

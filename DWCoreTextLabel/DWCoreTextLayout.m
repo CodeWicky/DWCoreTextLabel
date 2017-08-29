@@ -24,6 +24,15 @@
     _run = run;
 }
 
+-(void)configPreviousGlyph:(DWGlyphWrapper *)preGlyph {
+    _previousGlyph = preGlyph;
+    [preGlyph configNextGlyph:self];
+}
+
+-(void)configNextGlyph:(DWGlyphWrapper *)nextGlyph {
+    _nextGlyph = nextGlyph;
+}
+
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tindex:\t%lu",self.index]];
@@ -73,6 +82,7 @@
 -(void)handleGlyphsWithCTFrame:(CTFrameRef)ctFrame CTLine:(CTLineRef)ctLine origin:(CGPoint)origin {
     NSUInteger count = CTRunGetGlyphCount(_ctRun);
     NSMutableArray * temp = @[].mutableCopy;
+    DWGlyphWrapper * preGlyph = nil;
     for (int i = 0; i < count; i ++) {
         CGFloat offset = getCTFramePahtXOffset(ctFrame);
         NSUInteger index = _startIndex + i;
@@ -80,6 +90,8 @@
         CGFloat endXCrd = origin.x + CTLineGetOffsetForStringIndex(ctLine, index + 1, NULL) + offset;
         DWGlyphWrapper * wrapper = [[DWGlyphWrapper alloc] initWithIndex:index startXCrd:startXCrd endXCrd:endXCrd];
         [wrapper configRun:self];
+        [wrapper configPreviousGlyph:preGlyph];
+        preGlyph = wrapper;
         [temp addObject:wrapper];
     }
     _glyphs = temp.copy;
@@ -134,6 +146,8 @@
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tpreviousRun:\t%@",self.previousRun]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tnextRun:\t%@\n}",self.nextRun]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartIndex:\t%lu",self.startIndex]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendIndex:\t%lu",self.endIndex]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tglyphs:\t%@\n}",self.glyphs]];
@@ -226,30 +240,6 @@
     return layout;
 }
 
--(instancetype)initWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs {
-    if (self = [super init]) {
-        CFArrayRef arrLines = CTFrameGetLines(ctFrame);
-        NSUInteger count = CFArrayGetCount(arrLines);
-        CGPoint points[count];
-        CTFrameGetLineOrigins(ctFrame, CFRangeMake(0, 0), points);
-        CFRange range = CTFrameGetStringRange(ctFrame);
-        _maxLoc = range.location + range.length - 1;
-        DWCTLineWrapper * previousLine = nil;
-        NSMutableArray * lineA = @[].mutableCopy;
-        for (int i = 0; i < count; i++) {
-            CTLineRef line = CFArrayGetValueAtIndex(arrLines, i);
-            DWCTLineWrapper * lineWrap = [DWCTLineWrapper createWrapperForCTLine:line];
-            [lineWrap configWithOrigin:points[i] row:i ctFrame:ctFrame convertHeight:height];
-            [lineWrap configCTRunsWithCTFrame:ctFrame convertHeight:height considerGlyphs:considerGlyphs];
-            [lineWrap configPreviousLine:previousLine];
-            previousLine = lineWrap;
-            [lineA addObject:lineWrap];
-        }
-        _lines = lineA.copy;
-    }
-    return self;
-}
-
 -(void)handleActiveImageAndTextWithCustomLinkRegex:(NSString *)customLinkRegex autoCheckLink:(BOOL)autoCheckLink {
     NSMutableArray * arr = @[].mutableCopy;
     [self enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
@@ -279,6 +269,7 @@
     }
 }
 
+#pragma mark --- 以角标获取相关数据 ---
 -(DWCTLineWrapper *)lineAtLocation:(NSUInteger)loc {
     if (loc > _maxLoc) {
         return nil;
@@ -295,6 +286,24 @@
         }
     }];
     
+    return line;
+}
+
+-(DWCTLineWrapper *)lineAtPoint:(CGPoint)point {
+    __block DWCTLineWrapper * line = nil;
+    [self binarySearchInContainer:self.lines condition:^NSComparisonResult(DWCTLineWrapper * obj, NSUInteger currentIdx, BOOL *stop) {
+        if (DWRectFixContainsPoint(obj.frame, point)) {
+            line = obj;
+            return NSOrderedSame;
+        } else {
+            NSComparisonResult result = DWPointInRectV(point, obj.frame);
+            if (result == NSOrderedSame) {
+                return DWPointInRectH(point, obj.frame);
+            } else {
+                return result;
+            }
+        }
+    }];
     return line;
 }
 
@@ -317,44 +326,6 @@
     return run;
 }
 
--(DWGlyphWrapper *)glyphAtLocation:(NSUInteger)loc {
-    DWCTRunWrapper * run = [self runAtLocation:loc];
-    if (!run) {
-        return nil;
-    }
-    NSUInteger idx = loc - run.startIndex;
-    if (idx >= run.glyphs.count) {
-        return nil;
-    }
-    return run.glyphs[idx];
-}
-
--(CGFloat)xCrdAtLocation:(NSUInteger)loc {
-    DWGlyphWrapper * glyph = [self glyphAtLocation:loc];
-    if (!glyph) {
-        return MAXFLOAT;
-    }
-    return glyph.startXCrd;
-}
-
--(DWCTLineWrapper *)lineAtPoint:(CGPoint)point {
-    __block DWCTLineWrapper * line = nil;
-    [self binarySearchInContainer:self.lines condition:^NSComparisonResult(DWCTLineWrapper * obj, NSUInteger currentIdx, BOOL *stop) {
-        if (DWRectFixContainsPoint(obj.frame, point)) {
-            line = obj;
-            return NSOrderedSame;
-        } else {
-            NSComparisonResult result = DWPointInRectV(point, obj.frame);
-            if (result == NSOrderedSame) {
-                return DWPointInRectH(point, obj.frame);
-            } else {
-                return result;
-            }
-        }
-    }];
-    return line;
-}
-
 -(DWCTRunWrapper *)runAtPoint:(CGPoint)point {
     DWCTLineWrapper * line = [self lineAtPoint:point];
     if (!line) {
@@ -370,6 +341,18 @@
         }
     }];
     return run;
+}
+
+-(DWGlyphWrapper *)glyphAtLocation:(NSUInteger)loc {
+    DWCTRunWrapper * run = [self runAtLocation:loc];
+    if (!run) {
+        return nil;
+    }
+    NSUInteger idx = loc - run.startIndex;
+    if (idx >= run.glyphs.count) {
+        return nil;
+    }
+    return run.glyphs[idx];
 }
 
 -(DWGlyphWrapper *)glyphAtPoint:(CGPoint)point {
@@ -388,12 +371,248 @@
     return glyph;
 }
 
+-(CGFloat)xCrdAtLocation:(NSUInteger)loc {
+    DWGlyphWrapper * glyph = [self glyphAtLocation:loc];
+    if (!glyph) {
+        return MAXFLOAT;
+    }
+    return glyph.startXCrd;
+}
+
 -(CGFloat)xCrdAtPoint:(CGPoint)point {
     DWGlyphWrapper * glyph = [self glyphAtPoint:point];
     if (!glyph) {
         return MAXFLOAT;
     }
     return DWClosestSide(point.x, glyph.startXCrd, glyph.endXCrd);
+}
+
+#pragma mark --- 获取指定范围内符合条件的字形矩阵尺寸数组 ---
+-(NSArray *)selectedRectsBetweenLocationA:(NSUInteger)locationA andLocationB:(NSUInteger)locationB {
+    if (locationA >= locationB) {
+        return @[];
+    }
+    locationB --;//函数出入的是不包含的locationB，所以自减至包含位置
+    CGFloat startXCrd = [self xCrdAtLocation:locationA];
+    CGFloat endXCrd = [self glyphAtLocation:locationB].endXCrd;
+    DWCTRunWrapper * startRun = [self runAtLocation:locationA];
+    DWCTRunWrapper * endRun = [self runAtLocation:locationB];
+    return [self rectsInLayoutWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+}
+
+-(NSArray *)selectedRectsBetweenPointA:(CGPoint)pointA andPointB:(CGPoint)pointB {
+    DWCTRunWrapper * startRun = [self runAtPoint:pointA];
+    DWCTRunWrapper * endRun = [self runAtPoint:pointB];
+    if (startRun.startIndex > endRun.startIndex) {///保证小点在前
+        DWSwapoAB(startRun, endRun);
+        CGPoint temp = pointA;
+        pointA = pointB;
+        pointB = temp;
+    }
+    CGFloat startXCrd = [self xCrdAtPoint:pointA];
+    CGFloat endXCrd = [self xCrdAtPoint:pointB];
+    return [self rectsInLayoutWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+}
+
+-(NSArray *)selectedRectsInRange:(NSRange)range {
+    return [self selectedRectsBetweenLocationA:range.location andLocationB:range.location + range.length];
+}
+
+///返回run中对应的坐标之间的rect
+#pragma mark --- 获取给定Run两坐标之间的所有字形矩阵尺寸数组 ---
+-(NSArray *)rectInRun:(DWCTRunWrapper *)run XCrdA:(CGFloat)xCrdA xCrdB:(CGFloat)xCrdB {
+    if (xCrdA > xCrdB) {
+        DWSwapfAB(&xCrdA, &xCrdB);
+    }
+    CGRect rect = run.frame;
+    rect = DWShortenRectToXCrd(rect, xCrdA, YES);
+    rect = DWShortenRectToXCrd(rect, xCrdB, NO);
+    return @[[NSValue valueWithCGRect:rect]];
+}
+
+#pragma mark --- 获取给定Line某点之前或之后的所有字形矩阵尺寸数组 ---
+-(NSArray *)rectInLineAtLocation:(NSUInteger)loc backword:(BOOL)backward {
+    if (loc > _maxLoc) {
+        return nil;
+    }
+    DWCTRunWrapper * run = [self runAtLocation:loc];
+    CGFloat xCrd = [self xCrdAtLocation:loc];
+    return [self rectsInLineWithRun:run xCrd:xCrd backward:backward];
+}
+
+-(NSArray *)rectInLineAtPoint:(CGPoint)point backword:(BOOL)backward {
+    DWCTRunWrapper * run = [self runAtPoint:point];
+    CGFloat xCrd = [self xCrdAtPoint:point];
+    return [self rectsInLineWithRun:run xCrd:xCrd backward:backward];
+}
+
+#pragma mark --- 返回同一行中两个run之间在两个坐标之间的字形矩阵尺寸数组 ---
+-(NSArray *)rectsInLineWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd {
+    if (!startRun || !endRun || startXCrd == MAXFLOAT || endXCrd == MAXFLOAT) {///参数不合法
+        return @[];
+    }
+    if (![startRun.line isEqual:endRun.line]) {///参数不合法
+        return @[];
+    }
+    if (startRun.startIndex > endRun.startIndex) {///保证小者在前
+        DWSwapoAB(startRun, endRun);
+    }
+    if (startXCrd > endXCrd) {///保证小者在前
+        DWSwapfAB(&startXCrd, &endXCrd);
+    }
+    if ([startRun isEqual:endRun]) {///在同一Run中
+        return [self rectInRun:startRun XCrdA:startXCrd xCrdB:endXCrd];
+    }
+    ///不在同一run中
+    NSMutableArray * rects = @[].mutableCopy;
+    CGRect rect = startRun.frame;
+    rect = DWShortenRectToXCrd(rect, startXCrd, YES);
+    do {
+        startRun = [self handleRect:rect withRun:startRun backward:YES container:rects];
+        rect = startRun.frame;
+    } while (!CGRectEqualToRect(rect, CGRectZero) && ![startRun isEqual:endRun] && startRun);
+    rect = DWShortenRectToXCrd(endRun.frame, endXCrd, NO);
+    [self addRect:rect toArray:rects];
+    return rects.copy;
+}
+
+#pragma mark --- 获取指定CTLine所有字形矩阵尺寸数组 ---
+-(NSArray *)rectsInLine:(DWCTLineWrapper *)line {
+    if (!line || !line.runs.count) {
+        return @[];
+    }
+    DWCTRunWrapper * run = line.runs.firstObject;
+    if (!run) {
+        return @[];
+    }
+    return [self rectInLineAtPoint:run.frame.origin backword:YES];
+}
+
+#pragma mark --- 返回任意两个Run直接介于起始终止坐标之间的所有字形矩阵尺寸数组 ---
+-(NSArray *)rectsInLayoutWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd {
+    if (!startRun || !endRun || startXCrd == MAXFLOAT || endXCrd == MAXFLOAT) {///参数不合法
+        return @[];
+    }
+    if (startRun.startIndex > endRun.startIndex) {///参数不合法
+        DWSwapoAB(startRun, endRun);
+    }
+    if ([startRun.line isEqual:endRun.line]) {///同一Line中
+        return [self rectsInLineWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+    }
+    ///不同行
+    NSMutableArray * rects = @[].mutableCopy;
+    DWCTLineWrapper * startLine = startRun.line;
+    DWCTLineWrapper * endLine = endRun.line;
+    [rects addObjectsFromArray:[self rectsInLineWithRun:startRun xCrd:startXCrd backward:YES]];
+    while (![startLine.nextLine isEqual:endLine]) {
+        startLine = startLine.nextLine;
+        [rects addObjectsFromArray:[self rectsInLine:startLine]];
+    }
+    [rects addObjectsFromArray:[self rectsInLineWithRun:endRun xCrd:endXCrd backward:NO]];
+    return rects;
+}
+
+#pragma mark --- 获取点的位置返回角标 ---
+-(NSUInteger)locFromPoint:(CGPoint)point {
+    DWGlyphWrapper * glyph = [self glyphAtPoint:point];
+    if (!glyph) {
+        return NSNotFound;
+    }
+    CGFloat xCrd = [self xCrdAtPoint:point];
+    if (xCrd == glyph.startXCrd) {
+        return glyph.index;
+    } else {
+        return glyph.index + 1;
+    }
+}
+
+#pragma mark --- 工具方法 ---
+-(instancetype)initWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs {
+    if (self = [super init]) {
+        CFArrayRef arrLines = CTFrameGetLines(ctFrame);
+        NSUInteger count = CFArrayGetCount(arrLines);
+        CGPoint points[count];
+        CTFrameGetLineOrigins(ctFrame, CFRangeMake(0, 0), points);
+        CFRange range = CTFrameGetStringRange(ctFrame);
+        _maxLoc = range.location + range.length - 1;
+        DWCTLineWrapper * previousLine = nil;
+        NSMutableArray * lineA = @[].mutableCopy;
+        for (int i = 0; i < count; i++) {
+            CTLineRef line = CFArrayGetValueAtIndex(arrLines, i);
+            DWCTLineWrapper * lineWrap = [DWCTLineWrapper createWrapperForCTLine:line];
+            [lineWrap configWithOrigin:points[i] row:i ctFrame:ctFrame convertHeight:height];
+            [lineWrap configCTRunsWithCTFrame:ctFrame convertHeight:height considerGlyphs:considerGlyphs];
+            [lineWrap configPreviousLine:previousLine];
+            previousLine = lineWrap;
+            [lineA addObject:lineWrap];
+        }
+        _lines = lineA.copy;
+    }
+    return self;
+}
+
+/**
+ 根据指定条件返回对应Line中xCrd及相应模式对应的字形矩阵尺寸数组
+ 
+ @param run 指定位置的CTRun
+ @param xCrd 指定位置的横坐标
+ @param backward 是否为向后模式
+ @return 符合条件的字形矩阵尺寸数组
+ */
+-(NSArray *)rectsInLineWithRun:(DWCTRunWrapper *)run xCrd:(CGFloat)xCrd backward:(BOOL)backward {
+    if (!run || xCrd == MAXFLOAT) {
+        return @[];
+    }
+    NSMutableArray * rects = @[].mutableCopy;
+    CGRect rect = run.frame;
+    rect = DWShortenRectToXCrd(rect, xCrd, backward);
+    do {
+        run = [self handleRect:rect withRun:run backward:backward container:rects];
+        rect = run.frame;
+    } while (!CGRectEqualToRect(rect, CGRectZero) && run);
+    return rects.copy;
+}
+
+-(void)addRect:(CGRect)rect toArray:(NSMutableArray *)array {
+    [array addObject:[NSValue valueWithCGRect:rect]];
+}
+
+
+/**
+ 将同行中指定run之前或之后的尺寸加入容器
+
+ @param rect 指定run的已计算好的尺寸（可能不完整）
+ @param run 指定run
+ @param backward 指定模式
+ @param container 指定容器
+ @return 下一个或上一个run
+ 
+ 注：
+ 本方法为循环方法中的中间方法，会将传入的rect延长至下一个矩阵区域后加入指定容器。
+ 并返回下一个run
+ */
+-(DWCTRunWrapper *)handleRect:(CGRect)rect withRun:(DWCTRunWrapper *)run backward:(BOOL)backward container:(NSMutableArray *)container {
+    if (!container) {
+        return nil;
+    }
+    if (!run) {
+        return nil;
+    }
+    run = backward?run.nextRun:run.previousRun;
+    if (!run) {
+        if (CGRectEqualToRect(rect, CGRectZero)) {
+            return nil;
+        }
+        [self addRect:rect toArray:container];
+        return nil;
+    }
+    CGRect newR = run.frame;
+    if (CGRectEqualToRect(rect, CGRectZero)) {
+        return run;
+    }
+    CGFloat xCrd = backward?CGRectGetMinX(newR):CGRectGetMaxX(newR);
+    [self addRect:DWLengthenRectToXCrd(rect, xCrd) toArray:container];
+    return run;
 }
 
 /**
@@ -462,47 +681,4 @@
     }
 }
 
-static inline BOOL DWRectFixContainsPoint(CGRect rect,CGPoint point) {
-    rect = CGRectInset(rect, 0, -0.25);
-    return CGRectContainsPoint(rect, point);
-}
-
-static inline NSComparisonResult DWNumBetweenAB(CGFloat num,CGFloat a,CGFloat b) {
-    if (a > b) {
-        DWSwapAB(&a, &b);
-    }
-    if (num < a) {
-        return NSOrderedAscending;
-    } else if (num > b) {
-        return NSOrderedDescending;
-    } else {
-        return NSOrderedSame;
-    }
-}
-
-static inline NSComparisonResult DWPointInRectV(CGPoint point,CGRect rect) {
-    return DWNumBetweenAB(point.y, CGRectGetMinY(rect), CGRectGetMaxY(rect));
-}
-
-static inline NSComparisonResult DWPointInRectH(CGPoint point,CGRect rect) {
-    return DWNumBetweenAB(point.x, CGRectGetMinX(rect), CGRectGetMaxX(rect));
-}
-
-static inline CGFloat DWClosestSide(CGFloat xCrd,CGFloat left,CGFloat right) {
-    if (right < left) {
-        DWSwapAB(&left, &right);
-    }
-    CGFloat mid = (left + right) / 2;
-    if (xCrd > mid) {
-        return right;
-    } else {
-        return left;
-    }
-}
-
-static inline void DWSwapAB(CGFloat *a,CGFloat *b) {
-    CGFloat temp = *a;
-    *a = *b;
-    *b = temp;
-}
 @end
