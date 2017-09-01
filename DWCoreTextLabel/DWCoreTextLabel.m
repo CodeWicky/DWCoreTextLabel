@@ -12,6 +12,7 @@
 #import "DWWebImage.h"
 #import "DWCoreTextLabelCalculator.h"
 #import "DWCoreTextLayout.h"
+#import "DWCoreTextSelectionView.h"
 
 ///绘制取消
 #define DRAWCANCELED \
@@ -93,7 +94,14 @@ return;\
 ///绘制队列
 @property (nonatomic ,strong) dispatch_queue_t syncQueue;
 
+///布局计算类
 @property (nonatomic ,strong) DWCoreTextLayout * layout;
+
+///选中状态蒙层
+@property (nonatomic ,strong) DWCoreTextSelectionView * selectionView;
+
+///选择模式手势
+@property (nonatomic ,weak) UITapGestureRecognizer * selectGes;
 
 @end
 
@@ -700,9 +708,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         
         DRAWCANCELEDWITHREALSE(frameSetter, visibleFrame)
         
-        
-        
-        
         NSMutableArray * imageArr = [NSMutableArray array];
         [imageArr addObjectsFromArray:self.pathImageArr];
         [imageArr addObjectsFromArray:self.insertImageArr];
@@ -816,6 +821,9 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 -(NSArray *)handleSubviewsExclusionPaths {
     NSMutableArray * arr = [NSMutableArray array];
     [self.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (_selectionView && [obj isEqual:_selectionView]) {
+            return ;
+        }
         UIBezierPath * path = [UIBezierPath bezierPathWithRect:obj.frame];
         [arr addObject:path];
     }];
@@ -831,20 +839,26 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     NSMutableArray * exclusion = [NSMutableArray array];
     handleExclusionPathArr(exclusion, self.exclusionP, offset);
     handleExclusionPathArr(exclusion, self.imageExclusion, offset);
-    if (self.excludeSubviews && self.subviews.count > 0) {
+    
+    NSUInteger countLimit = 0;
+    if (_selectionView) {
+        countLimit ++;
+    }
+    
+    if (self.excludeSubviews && self.subviews.count > countLimit) {
         NSArray * subViewPath = [self handleSubviewsExclusionPaths];
         handleExclusionPathArr(exclusion, subViewPath, offset);
     }
     return exclusion;
 }
 
-///校正路径并放入环绕数组
-static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
-    [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        translatePath(obj, offset);
-        [container addObject:obj];
-    }];
-}
+/////校正路径并放入环绕数组
+//static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
+//    [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+//        translatePath(obj, offset);
+//        [container addObject:obj];
+//    }];
+//}
 
 #pragma mark --- 点击事件相关 ---
 ///将所有插入图片和活跃文本字典中的frame补全，重绘前调用
@@ -917,7 +931,29 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 }
 
 #pragma mark --- 获取点击行为 ---
+-(void)doubleClickAction:(UITapGestureRecognizer *)sender {
+    CGPoint point = [sender locationInView:self];
+    if (self.selectingMode) {
+        NSUInteger loc = [_layout locFromPoint:point];
+        if (loc == NSNotFound) {
+            return;
+        }
+        NSArray * rects = [_layout selectedRectsBetweenLocationA:loc andLocationB:(loc + 1)];
+        [self.selectionView updateSelectedRects:rects];
+    } else {
+        DWPosition position = [_layout positionAtPoint:point];
+        if (!DWPositionIsNull(position)) {
+            _selectingMode = YES;
+            [self.selectionView updateCaretWithPosition:position];
+        }
+    }
+}
+
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    
+    
+    NSLog(@"touch begin");
+    
     CGPoint point = [[touches anyObject] locationInView:self];
     NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
     BOOL autoLink = [dic[@"link"] length];
@@ -929,6 +965,8 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 }
 
 -(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    
+    NSLog(@"touch move");
     if (self.hasActionToDo) {
         CGPoint point = [[touches anyObject] locationInView:self];
         NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
@@ -949,6 +987,8 @@ static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * p
 }
 
 -(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    
+    NSLog(@"touch end");
     if (self.hasActionToDo) {
         CGPoint point = [[touches anyObject] locationInView:self];
         NSDictionary * dic = [self handleHasActionImageWithPoint:point];
@@ -1006,6 +1046,7 @@ static CGFloat widthCallBacks(void * ref) {
         _reCalculate = YES;
         _reCheck = YES;
         _excludeSubviews = YES;
+        _enabelSelect = YES;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;
@@ -1013,6 +1054,10 @@ static CGFloat widthCallBacks(void * ref) {
         layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
         };
+        UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
+        doubleClick.numberOfTapsRequired = 2;
+        doubleClick.delaysTouchesBegan = YES;
+        [self addGestureRecognizer:doubleClick];
     }
     return self;
 }
@@ -1114,6 +1159,9 @@ static CGFloat widthCallBacks(void * ref) {
 -(void)setFrame:(CGRect)frame {
     if (!CGRectEqualToRect(self.frame, frame)) {
         [super setFrame:frame];
+        if (_selectionView) {
+            _selectionView.frame = self.bounds;
+        }
         [self handleAutoRedrawWithRecalculate:YES reCheck:NO reDraw:self.autoRedraw];
     }
 }
@@ -1254,6 +1302,12 @@ static CGFloat widthCallBacks(void * ref) {
     }
 }
 
+-(void)setEnabelSelect:(BOOL)enabelSelect {
+    if (_enabelSelect != enabelSelect) {
+        _enabelSelect = enabelSelect;
+        self.selectGes.enabled = enabelSelect;
+    }
+}
 #pragma mark ---链接属性setter、getter---
 -(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes {
     _activeTextAttributes = activeTextAttributes;
@@ -1445,6 +1499,14 @@ static CGFloat widthCallBacks(void * ref) {
         _customLinkDic = [NSMutableDictionary dictionary];
     }
     return _customLinkDic;
+}
+
+-(DWCoreTextSelectionView *)selectionView {
+    if (!_selectionView) {
+        _selectionView = [[DWCoreTextSelectionView alloc] initWithFrame:self.bounds];
+        [self addSubview:_selectionView];
+    }
+    return _selectionView;
 }
 
 @end

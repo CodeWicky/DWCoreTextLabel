@@ -139,6 +139,7 @@
  修改活跃文字、自动链接响应方式。修复设置高亮状态、未设置普通状态时点击后不恢复的bug
  修复设置链接属性字号不改变bug，图片响应方式改造完成
  删除图片API添加完成，父对象弱引用改造完成
+ Layout计算类计算选中尺寸API添加完成
  
  */
 
@@ -330,6 +331,16 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
  自定制链接高亮时属性
  */
 @property (nonatomic ,strong) NSDictionary * customLinkHighlightAttributes;
+
+/**
+ 选择模式
+ */
+@property (nonatomic ,assign ,readonly) BOOL selectingMode;
+
+/**
+ 允许选中
+ */
+@property (nonatomic ,assign) BOOL enabelSelect;
 
 #pragma mark --- 接口方法 ---
 /**

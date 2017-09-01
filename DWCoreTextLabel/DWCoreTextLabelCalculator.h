@@ -158,6 +158,15 @@ NSArray * getRangeExcept(NSRange targetRange,NSRange exceptRange);
  */
 NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds);
 
+/**
+ 将给定数组中的路径根据偏移量校正路径后放入指定容器
+
+ @param container 指定容器
+ @param pathArr 给定路径数组
+ @param offset 纵向偏移量
+ */
+void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset);
+
 
 #pragma mark --- 镜像转换方法 ---
 /**
@@ -283,6 +292,21 @@ CGRect DWShortenRectToXCrd(CGRect rect,CGFloat xCrd,BOOL backward);
  @return 延长后的尺寸
  */
 CGRect DWLengthenRectToXCrd(CGRect rect,CGFloat xCrd);
+
+
+/**
+ 比较两个点的空间位置
+
+ @param p1 点1
+ @param p2 点2
+ @return 返回点2相对于点1的位置
+ 
+ 注：
+ 当p1与p2重合时返回NSOrderedSame，
+ 当向量p1p2与坐标系x轴夹角位于(Pi,2Pi]时返回NSOrderedAscending，
+ 其余情况返回NSOrderedDescending。
+ */
+NSComparisonResult DWComparePoint(CGPoint p1,CGPoint p2);
 
 
 #pragma mark --- 交换对象方法 ---

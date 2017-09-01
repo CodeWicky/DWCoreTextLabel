@@ -33,6 +33,11 @@
     _nextGlyph = nextGlyph;
 }
 
+-(void)configPositionWithBaseLineY:(CGFloat)baseLineY height:(CGFloat)height {
+    _startPosition = DWMakePosition(baseLineY, _startXCrd, height);
+    _endPosition = DWMakePosition(baseLineY, _endXCrd, height);
+}
+
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tindex:\t%lu",self.index]];
@@ -83,6 +88,8 @@
     NSUInteger count = CTRunGetGlyphCount(_ctRun);
     NSMutableArray * temp = @[].mutableCopy;
     DWGlyphWrapper * preGlyph = nil;
+    CGFloat baseLineY = CGRectGetMaxY(self.frame);
+    CGFloat height = CGRectGetHeight(self.frame);
     for (int i = 0; i < count; i ++) {
         CGFloat offset = getCTFramePahtXOffset(ctFrame);
         NSUInteger index = _startIndex + i;
@@ -91,6 +98,7 @@
         DWGlyphWrapper * wrapper = [[DWGlyphWrapper alloc] initWithIndex:index startXCrd:startXCrd endXCrd:endXCrd];
         [wrapper configRun:self];
         [wrapper configPreviousGlyph:preGlyph];
+        [wrapper configPositionWithBaseLineY:baseLineY height:height];
         preGlyph = wrapper;
         [temp addObject:wrapper];
     }
@@ -371,6 +379,26 @@
     return glyph;
 }
 
+-(DWPosition)positionAtLocation:(NSUInteger)loc {
+    DWGlyphWrapper * glyph = [self glyphAtLocation:loc];
+    if (!glyph) {
+        return DWPositionNull;
+    }
+    return glyph.startPosition;
+}
+
+-(DWPosition)positionAtPoint:(CGPoint)point {
+    DWGlyphWrapper * glyph = [self glyphAtPoint:point];
+    if (!glyph) {
+        return DWPositionNull;
+    }
+    CGFloat closestSide = DWClosestSide(point.x, glyph.startXCrd, glyph.endXCrd);
+    if (closestSide == glyph.startXCrd) {
+        return glyph.startPosition;
+    }
+    return glyph.endPosition;
+}
+
 -(CGFloat)xCrdAtLocation:(NSUInteger)loc {
     DWGlyphWrapper * glyph = [self glyphAtLocation:loc];
     if (!glyph) {
@@ -389,6 +417,9 @@
 
 #pragma mark --- 获取指定范围内符合条件的字形矩阵尺寸数组 ---
 -(NSArray *)selectedRectsBetweenLocationA:(NSUInteger)locationA andLocationB:(NSUInteger)locationB {
+    if (locationB >= _maxLoc + 1) {
+        return @[];
+    }
     if (locationA >= locationB) {
         return @[];
     }
@@ -432,8 +463,11 @@
 
 #pragma mark --- 获取给定Line某点之前或之后的所有字形矩阵尺寸数组 ---
 -(NSArray *)rectInLineAtLocation:(NSUInteger)loc backword:(BOOL)backward {
-    if (loc > _maxLoc) {
-        return nil;
+    if (loc > _maxLoc && backward) {
+        return @[];
+    }
+    if (!backward && loc > _maxLoc + 1) {
+        return @[];
     }
     DWCTRunWrapper * run = [self runAtLocation:loc];
     CGFloat xCrd = [self xCrdAtLocation:loc];
@@ -518,12 +552,7 @@
     if (!glyph) {
         return NSNotFound;
     }
-    CGFloat xCrd = [self xCrdAtPoint:point];
-    if (xCrd == glyph.startXCrd) {
-        return glyph.index;
-    } else {
-        return glyph.index + 1;
-    }
+    return glyph.index;
 }
 
 #pragma mark --- 工具方法 ---

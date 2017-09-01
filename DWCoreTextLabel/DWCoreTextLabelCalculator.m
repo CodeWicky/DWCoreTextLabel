@@ -205,6 +205,14 @@ NSDictionary * getExclusionDic(NSArray * paths,CGRect viewBounds) {
     return [NSDictionary dictionaryWithObjectsAndKeys:pathsArray,kCTFrameClippingPathsAttributeName, nil];
 }
 
+///将给定数组中的路径根据偏移量校正路径后放入指定容器
+void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
+    [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        translatePath(obj, offset);
+        [container addObject:obj];
+    }];
+}
+
 
 #pragma mark --- 镜像转换方法 ---
 ///获取镜像path
@@ -336,6 +344,18 @@ CGRect DWLengthenRectToXCrd(CGRect rect,CGFloat xCrd) {
         backward = NO;
     }
     return DWFixRectToXCrd(rect, xCrd, result, backward);
+}
+
+NSComparisonResult DWComparePoint(CGPoint p1,CGPoint p2) {
+    if (CGPointEqualToPoint(p1, p2)) {
+        return NSOrderedSame;
+    }
+    if (p2.y > p1.y) {
+        return NSOrderedAscending;
+    } else if (p2.y == p1.y && p2.x > p1.x) {
+        return NSOrderedAscending;
+    }
+    return NSOrderedDescending;
 }
 
 

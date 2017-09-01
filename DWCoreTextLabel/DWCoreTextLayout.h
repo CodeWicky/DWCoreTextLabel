@@ -12,6 +12,7 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreText/CoreText.h>
+#import "DWCoreTextCommon.h"
 
 @class DWCTRunWrapper;
 /**
@@ -19,6 +20,7 @@
  */
 @interface DWGlyphWrapper : NSObject
 
+///所属run
 @property (nonatomic ,weak ,readonly) DWCTRunWrapper * run;
 
 ///上一个字形
@@ -28,13 +30,19 @@
 @property (nonatomic ,weak ,readonly) DWGlyphWrapper * nextGlyph;
 
 ///字形开始x坐标
-@property (nonatomic ,assign) CGFloat startXCrd;
+@property (nonatomic ,assign ,readonly) CGFloat startXCrd;
 
 ///字形结束x坐标
-@property (nonatomic ,assign) CGFloat endXCrd;
+@property (nonatomic ,assign ,readonly) CGFloat endXCrd;
 
 ///字形角标
-@property (nonatomic ,assign) NSUInteger index;
+@property (nonatomic ,assign ,readonly) NSUInteger index;
+
+///起始位置
+@property (nonatomic ,assign ,readonly) DWPosition startPosition;
+
+///终止位置
+@property (nonatomic ,assign ,readonly) DWPosition endPosition;
 
 @end
 
@@ -116,7 +124,7 @@
 @property (nonatomic ,weak ,readonly) DWCTLineWrapper * nextLine;
 
 ///行数
-@property (nonatomic ,assign) NSUInteger row;
+@property (nonatomic ,assign ,readonly) NSUInteger row;
 
 ///本行包含的ctRun数组
 @property (nonatomic ,strong ,readonly) NSArray <DWCTRunWrapper *>* runs;
@@ -170,7 +178,7 @@
 -(void)enumerateCTRunUsingBlock:(void(^)(DWCTRunWrapper * run,BOOL * stop))handler;
 
 /***
- 返回CTLine、CTRun、Glyph或x坐标
+ 返回CTLine、CTRun、Glyph、Position或x坐标
 
  注：
  loc为对应角标
@@ -182,6 +190,8 @@
 -(DWCTRunWrapper *)runAtPoint:(CGPoint)point;
 -(DWGlyphWrapper *)glyphAtLocation:(NSUInteger)loc;
 -(DWGlyphWrapper *)glyphAtPoint:(CGPoint)point;
+-(DWPosition)positionAtLocation:(NSUInteger)loc;
+-(DWPosition)positionAtPoint:(CGPoint)point;
 -(CGFloat)xCrdAtLocation:(NSUInteger)loc;
 -(CGFloat)xCrdAtPoint:(CGPoint)point;
 
