@@ -26,11 +26,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../DWCoreTextLabel/DWCoreTextLabel.m"
-            timestampString = "525954681.686529"
+            timestampString = "526048206.648027"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "897"
-            endingLineNumber = "897"
+            startingLineNumber = "906"
+            endingLineNumber = "906"
             landmarkName = "-handleHighlightClickWithDic:isLink:"
             landmarkType = "7">
          </BreakpointContent>
@@ -41,13 +41,30 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../DWCoreTextLabel/DWCoreTextSelectionView.m"
-            timestampString = "525949859.464396"
+            filePath = "../DWCoreTextLabel/DWCoreTextLabel.m"
+            timestampString = "526051688.29348"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "106"
-            endingLineNumber = "106"
-            landmarkName = "-caret"
+            startingLineNumber = "1030"
+            endingLineNumber = "1030"
+            landmarkName = "-touchesBegan:withEvent:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            condition = "updated == NO"
+            continueAfterRunningActions = "No"
+            filePath = "../DWCoreTextLabel/DWCoreTextSelectionView.m"
+            timestampString = "526049378.359964"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "71"
+            endingLineNumber = "71"
+            landmarkName = "-updateSelectedRects:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -57,13 +74,13 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../DWCoreTextLabel/DWCoreTextSelectionView.m"
-            timestampString = "525949859.464396"
+            filePath = "../DWCoreTextLabel/DWCoreTextLayout.m"
+            timestampString = "526049477.799632"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "143"
-            endingLineNumber = "143"
-            landmarkName = "-setBlinks:"
+            startingLineNumber = "426"
+            endingLineNumber = "426"
+            landmarkName = "-selectedRectsBetweenLocationA:andLocationB:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -73,13 +90,46 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../DWCoreTextLabel/DWCoreTextSelectionView.m"
-            timestampString = "525949859.464396"
+            filePath = "../DWCoreTextLabel/DWCoreTextLayout.m"
+            timestampString = "526049482.240508"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "67"
-            endingLineNumber = "67"
-            landmarkName = "-updateCaretWithPosition:"
+            startingLineNumber = "429"
+            endingLineNumber = "429"
+            landmarkName = "-selectedRectsBetweenLocationA:andLocationB:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../DWCoreTextLabel/DWCoreTextLayout.m"
+            timestampString = "526049532.044624"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "533"
+            endingLineNumber = "533"
+            landmarkName = "-rectsInLayoutWithStartRun:startXCrd:endRun:endXCrd:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            condition = "r.length &gt; 10000"
+            continueAfterRunningActions = "No"
+            filePath = "../DWCoreTextLabel/DWCoreTextLabel.m"
+            timestampString = "526052190.705634"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "1091"
+            endingLineNumber = "1091"
+            landmarkName = "-touchesMoved:withEvent:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

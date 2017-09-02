@@ -117,6 +117,12 @@
 ///结束位置(不包含)
 @property (nonatomic ,assign ,readonly) NSUInteger endIndex;
 
+/////第一个字形
+//@property (nonatomic ,weak ,readonly) DWGlyphWrapper * firstGlyph;
+//
+/////最后一个字形
+//@property (nonatomic ,weak ,readonly) DWGlyphWrapper * lastGlyph;
+
 ///上一行
 @property (nonatomic ,weak ,readonly) DWCTLineWrapper * previousLine;
 
@@ -280,7 +286,22 @@
 
  @param point 屏幕中的点
  @return 对应角标
+ 
+ 注：
+ 返回点对应字形的角标
  */
 -(NSUInteger)locFromPoint:(CGPoint)point;
+
+
+/**
+ 返回较近一侧的坐标
+
+ @param point 屏幕中的点
+ @return 对应坐标
+ 
+ 注：
+ 返回点所在较近一侧的角标
+ */
+-(NSUInteger)closestLocFromPoint:(CGPoint)point;
 
 @end

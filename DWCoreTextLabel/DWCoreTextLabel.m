@@ -103,6 +103,15 @@ return;\
 ///选择模式手势
 @property (nonatomic ,weak) UITapGestureRecognizer * selectGes;
 
+///当前选中的范围
+@property (nonatomic ,assign) NSRange seletedRange;
+
+///拖动开始位置
+@property (nonatomic ,assign) BOOL startGrab;
+
+///拖动结束位置
+@property (nonatomic ,assign) BOOL endGrab;
+
 @end
 
 static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
@@ -930,22 +939,67 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     return dic;
 }
 
+#pragma mark --- 处理选中事件 ---
+-(NSRange)selectAtGlyphA:(DWGlyphWrapper *)gA glyphB:(DWGlyphWrapper *)gB {
+    if (gA.index > gB.index) {
+        DWSwapoAB(gA, gB);
+    }
+    NSArray * rects = [_layout selectedRectsBetweenLocationA:gA.index andLocationB:(gB.index + 1)];
+    BOOL success = [self.selectionView updateSelectedRects:rects startGrabberPosition:gA.startPosition endGrabberPosition:gB.endPosition];
+    if (success) {
+        return NSMakeRange(gA.index, gB.index - gA.index + 1);
+    }
+    return NSRangeNull;
+}
+
+-(void)selectAtRange:(NSRange)range {
+    if (NSEqualRanges(self.seletedRange, range)) {
+        return;
+    }
+    DWGlyphWrapper * gA = [_layout glyphAtLocation:range.location];
+    if (!gA) {
+        return;
+    }
+    DWGlyphWrapper * gB = [_layout glyphAtLocation:NSMaxRange(range) - 1];
+    if (!gB) {
+        return;
+    }
+    if (gA.index > gB.index) {
+        DWSwapoAB(gA, gB);
+    }
+    NSArray * rects = [_layout selectedRectsBetweenLocationA:gA.index andLocationB:(gB.index + 1)];
+    BOOL success = [self.selectionView updateSelectedRects:rects startGrabberPosition:gA.startPosition endGrabberPosition:gB.endPosition];
+    if (success) {
+        self.seletedRange = NSMakeRange(gA.index, gB.index - gA.index + 1);
+        NSLog(@"selected ==== %@",NSStringFromRange(self.seletedRange));
+        
+    } else {
+        self.seletedRange = NSRangeNull;
+    }
+}
+
+-(void)cancelSelected {
+    [self.selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
+}
+
+-(void)grabSelectWithStartGrab:(BOOL)startGrab {
+    
+}
+
 #pragma mark --- 获取点击行为 ---
 -(void)doubleClickAction:(UITapGestureRecognizer *)sender {
     CGPoint point = [sender locationInView:self];
-    if (self.selectingMode) {
-        NSUInteger loc = [_layout locFromPoint:point];
-        if (loc == NSNotFound) {
-            return;
-        }
-        NSArray * rects = [_layout selectedRectsBetweenLocationA:loc andLocationB:(loc + 1)];
-        [self.selectionView updateSelectedRects:rects];
-    } else {
-        DWPosition position = [_layout positionAtPoint:point];
-        if (!DWPositionIsNull(position)) {
-            _selectingMode = YES;
-            [self.selectionView updateCaretWithPosition:position];
-        }
+    DWGlyphWrapper * glyph = [_layout glyphAtPoint:point];
+    if (!glyph) {
+        return;
+    }
+    NSRange range = [self selectAtGlyphA:glyph glyphB:glyph];
+    if (NSEqualRanges(range, NSRangeNull)) {
+        return;
+    }
+    self.seletedRange = range;
+    if (!self.selectingMode) {
+        _selectingMode = YES;
     }
 }
 
@@ -955,59 +1009,125 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     NSLog(@"touch begin");
     
     CGPoint point = [[touches anyObject] locationInView:self];
-    NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
-    BOOL autoLink = [dic[@"link"] length];
-    if (dic) {
-        [self handleHighlightClickWithDic:dic isLink:autoLink];
-        return;
+    if (!self.selectingMode) {
+        NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
+        BOOL autoLink = [dic[@"link"] length];
+        if (dic) {
+            [self handleHighlightClickWithDic:dic isLink:autoLink];
+            return;
+        }
+    } else {
+        if (!NSEqualRanges(self.seletedRange, NSRangeNull)) {
+            DWGlyphWrapper * g = [_layout glyphAtLocation:self.seletedRange.location];
+            CGRect r = CGRectOffset(CGRectFromPosition(g.startPosition, 10), -5, 0);
+            r = CGRectInset(r, 0, -5);
+            if (CGRectContainsPoint(r, point)) {
+                _startGrab = YES;
+            } else {
+                g = [_layout glyphAtLocation:NSMaxRange(self.seletedRange) - 1];
+                r = CGRectOffset(CGRectFromPosition(g.endPosition, 10), -5, 0);
+                r = CGRectInset(r, 0, -5);
+                if (CGRectContainsPoint(r, point)) {
+                    _endGrab = YES;
+                }
+            }
+            if (_startGrab || _endGrab) {///拖动开始
+                [self grabSelectWithStartGrab:_startGrab];
+            } else {
+                [self cancelSelected];
+            }
+            return;
+        }
     }
     [super touchesBegan:touches withEvent:event];
 }
 
 -(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     
-    NSLog(@"touch move");
-    if (self.hasActionToDo) {
-        CGPoint point = [[touches anyObject] locationInView:self];
-        NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
-        if (!self.hasActionToDo || ![self.highlightDic isEqualToDictionary:dic]) {
-            if (self.textClicked) {
-                self.textClicked = NO;
-                self.highlightDic = nil;
-                [self setNeedsDisplay];
-            } else if (self.linkClicked) {
-                self.linkClicked = NO;
-                self.highlightDic = nil;
-                [self setNeedsDisplay];
+//    NSLog(@"touch move");
+    CGPoint point = [[touches anyObject] locationInView:self];
+    if (!self.selectingMode) {
+        if (self.hasActionToDo) {
+            NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
+            if (!self.hasActionToDo || ![self.highlightDic isEqualToDictionary:dic]) {
+                if (self.textClicked) {
+                    self.textClicked = NO;
+                    self.highlightDic = nil;
+                    [self setNeedsDisplay];
+                } else if (self.linkClicked) {
+                    self.linkClicked = NO;
+                    self.highlightDic = nil;
+                    [self setNeedsDisplay];
+                }
             }
+            return;
         }
-        return;
+    } else {
+        if (_startGrab || _endGrab) {
+            NSUInteger loc = [_layout closestLocFromPoint:point];
+            NSRange r = self.seletedRange;
+            if (_startGrab) {
+                NSUInteger max = NSMaxRange(r);
+                if (loc <= max) {
+                    r.location = loc;
+                    r.length = max - loc;
+                } else {
+                    r.location = max;
+                    r.length = loc - r.location;
+                    _startGrab = NO;
+                    _endGrab = YES;
+                }
+            } else {
+                NSUInteger min = r.location;
+                if (loc >= min) {
+                    r.length = loc - r.location;
+                } else {
+                    r.length = NSMaxRange(r) - loc;
+                    r.location = loc;
+                    _startGrab = YES;
+                    _endGrab = NO;
+                }
+            }
+            [self selectAtRange:r];
+            return;
+        }
     }
+    
     [super touchesMoved:touches withEvent:event];
 }
 
 -(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     
     NSLog(@"touch end");
-    if (self.hasActionToDo) {
-        CGPoint point = [[touches anyObject] locationInView:self];
-        NSDictionary * dic = [self handleHasActionImageWithPoint:point];
-        if (dic) {
-            [self handleClickWithDic:dic];
-            return;
-        }
-        dic = self.highlightDic;
-        if (dic) {
-            if (self.textClicked) {
-                self.textClicked = NO;
-                [self setNeedsDisplay];
-            } else if (self.linkClicked) {
-                self.linkClicked = NO;
-                [self setNeedsDisplay];
+    if (!self.selectingMode) {
+        if (self.hasActionToDo) {
+            CGPoint point = [[touches anyObject] locationInView:self];
+            NSDictionary * dic = [self handleHasActionImageWithPoint:point];
+            if (dic) {
+                [self handleClickWithDic:dic];
+                return;
             }
-            [self handleClickWithDic:dic];
-            return;
+            dic = self.highlightDic;
+            if (dic) {
+                if (self.textClicked) {
+                    self.textClicked = NO;
+                    [self setNeedsDisplay];
+                } else if (self.linkClicked) {
+                    self.linkClicked = NO;
+                    [self setNeedsDisplay];
+                }
+                [self handleClickWithDic:dic];
+                return;
+            }
         }
+    } else {
+        if (_startGrab || _endGrab) {
+            _startGrab = NO;
+            _endGrab = NO;
+        } else {
+            _selectingMode = NO;
+        }
+        return;
     }
     [super touchesEnded:touches withEvent:event];
 }
@@ -1047,6 +1167,7 @@ static CGFloat widthCallBacks(void * ref) {
         _reCheck = YES;
         _excludeSubviews = YES;
         _enabelSelect = YES;
+        _seletedRange = NSRangeNull;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;

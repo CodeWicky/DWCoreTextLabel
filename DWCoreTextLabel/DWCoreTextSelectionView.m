@@ -24,19 +24,21 @@
 
 @implementation DWCoreTextSelectionView
 
--(void)updateGrabberWithStartPosition:(DWPosition)startP endPosition:(DWPosition)endP {
+-(BOOL)updateGrabberWithStartPosition:(DWPosition)startP endPosition:(DWPosition)endP {
     if (DWPositionIsNull(startP) || DWPositionIsNull(endP)) {
-        return;
+        return NO;
     }
     if (DWPositionIsZero(startP) || DWPositionIsZero(endP)) {
         [self.startGrabber hideCaret];
         [self.endGrabber hideCaret];
-        return;
+        return YES;
     }
     NSComparisonResult result = DWComparePosition(startP, endP);
-    if (result == NSOrderedSame) {
-        return;
-    }
+//    if (result == NSOrderedSame) {
+//        [self.startGrabber hideCaret];
+//        [self.endGrabber hideCaret];
+//        return YES;
+//    }
     if (result == NSOrderedDescending) {
         DWPosition temp = startP;
         startP = endP;
@@ -47,35 +49,50 @@
     [self.endGrabber showCaret];
     [self.startGrabber moveToPosition:startP];
     [self.endGrabber moveToPosition:endP];
+    return YES;
 }
 
--(void)updateSelectedRects:(NSArray *)rects {
+-(BOOL)updateSelectedRects:(NSArray *)rects {
     [self.maskViewsContainer.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];///移除全部遮罩
     CGRect box = self.maskViewsContainer.bounds;
+    __block BOOL updated = NO;
     [rects enumerateObjectsUsingBlock:^(NSValue * obj, NSUInteger idx, BOOL * _Nonnull stop) {
         CGRect rect = [obj CGRectValue];
         if (CGRectIsEmpty(rect) || CGRectIsEmpty(CGRectIntersection(rect, box))) {
             return ;
         }
+        if (!updated) {
+            updated = YES;
+        }
         UIView * mask = [[UIView alloc] initWithFrame:rect];
         mask.backgroundColor = [UIColor colorWithRed:30 / 255.0 green:144 / 255.0 blue:1 alpha:0.3];
         [self.maskViewsContainer addSubview:mask];
     }];
+    return updated;
 }
 
--(void)updateCaretWithPosition:(DWPosition)position {
+-(BOOL)updateSelectedRects:(NSArray *)rects startGrabberPosition:(DWPosition)startP endGrabberPosition:(DWPosition)endP {
+    BOOL updated = [self updateGrabberWithStartPosition:startP endPosition:endP];
+    if (updated) {
+        updated |= [self updateSelectedRects:rects];
+    }
+    return updated;
+}
+
+-(BOOL)updateCaretWithPosition:(DWPosition)position {
     if (DWPositionIsNull(position)) {
-        return;
+        return NO;
     }
     if (DWPositionIsZero(position)) {
         [self.caret hideCaret];
-        return;
+        return YES;;
     }
     [self updateSelectedRects:@[]];
     [self.startGrabber hideCaret];
     [self.endGrabber hideCaret];
     [self.caret showCaret];
     [self.caret moveToPosition:position];
+    return YES;
 }
 
 -(void)setFrame:(CGRect)frame {
@@ -226,6 +243,11 @@ CABasicAnimation * DWCoreTextCaretBlinkAnimation () {
     return self;
 }
 
+-(void)moveToPosition:(DWPosition)position {
+    [super moveToPosition:position];
+    _needsResetPot = YES;
+}
+
 -(void)layoutSubviews {
     [super layoutSubviews];
     if (!self.dot) {
@@ -253,6 +275,5 @@ CABasicAnimation * DWCoreTextCaretBlinkAnimation () {
 
 -(void)setBlinks:(BOOL)blinks {
     ///不做动作
-    NSLog(@"You shouldn't use this property in %@",NSStringFromClass([self class]));
 }
 @end

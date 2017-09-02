@@ -9,22 +9,10 @@
 #import "DWCoreTextCommon.h"
 #import "DWCoreTextLabelCalculator.h"
 
+#pragma mark --- DWPosition ---
 DWPosition const DWPositionZero = {0,0,0};
 
 DWPosition const DWPositionNull = {MAXFLOAT,MAXFLOAT,MAXFLOAT};
-
-DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height) {
-    DWPosition pos = {baseLineY,xCrd,height};
-    return pos;
-}
-
-CGPoint DWPositionGetBaseOrigin(DWPosition p) {
-    return CGPointMake(p.xCrd, p.baseLineY);
-}
-
-BOOL DWPositionEqualToPosition(DWPosition p1,DWPosition p2) {
-    return (p1.baseLineY == p2.baseLineY) && (p1.xCrd == p2.xCrd) && (p1.height == p2.height);
-}
 
 BOOL DWPositionIsNull(DWPosition p) {
     return DWPositionEqualToPosition(p, DWPositionNull);
@@ -50,4 +38,9 @@ CGRect CGRectFromPosition(DWPosition p,CGFloat width) {
     }
     return CGRectMake(p.xCrd, p.baseLineY - p.height, width, p.height);
 }
+
+#pragma mark --- NSRange ---
+NSRange const NSRangeZero = {0,0};
+
+NSRange const NSRangeNull = {MAXFLOAT,MAXFLOAT};
 

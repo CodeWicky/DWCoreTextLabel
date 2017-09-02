@@ -12,7 +12,14 @@
 
 @interface DWCoreTextSelectionView : UIView
 
--(void)updateSelectedRects:(NSArray *)rects;
+/**
+ 更新选中区域
+ 
+ @param rects 选中区域尺寸数组
+ 
+ @return 更新是否成功
+ */
+-(BOOL)updateSelectedRects:(NSArray *)rects;
 
 
 /**
@@ -20,16 +27,32 @@
 
  @param startP 起始范围拖动指示器位置
  @param endP 范围终止拖动指示器位置
+ 
+ @return 更新是否成功
  */
--(void)updateGrabberWithStartPosition:(DWPosition)startP endPosition:(DWPosition)endP;
+-(BOOL)updateGrabberWithStartPosition:(DWPosition)startP endPosition:(DWPosition)endP;
+
+
+/**
+ 更新选中区域
+ 
+ @param rects 选中区域
+ @param startP 起始范围拖动指示器位置
+ @param endP 终止范围拖动指示器位置
+ 
+ @return 更新是否成功
+ */
+-(BOOL)updateSelectedRects:(NSArray *)rects startGrabberPosition:(DWPosition)startP endGrabberPosition:(DWPosition)endP;
 
 
 /**
  更新插入指示器位置
 
  @param position 位置
+ 
+ @return 更新是否成功
  */
--(void)updateCaretWithPosition:(DWPosition)position;
+-(BOOL)updateCaretWithPosition:(DWPosition)position;
 
 @end
 

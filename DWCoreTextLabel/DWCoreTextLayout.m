@@ -226,6 +226,11 @@
     _nextLine = nextLine;
 }
 
+//-(void)configSideGlyph {
+//    _firstGlyph = self.runs.firstObject.glyphs.firstObject;
+//    _lastGlyph = self.runs.lastObject.glyphs.lastObject;
+//}
+
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
@@ -555,6 +560,19 @@
     return glyph.index;
 }
 
+-(NSUInteger)closestLocFromPoint:(CGPoint)point {
+    DWGlyphWrapper * glyph = [self glyphAtPoint:point];
+    if (!glyph) {
+        return NSNotFound;
+    }
+    CGFloat xCrd = [self xCrdAtPoint:point];
+    if (xCrd == glyph.startXCrd) {
+        return glyph.index;
+    } else {
+        return glyph.index + 1;
+    }
+}
+
 #pragma mark --- 工具方法 ---
 -(instancetype)initWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs {
     if (self = [super init]) {
@@ -572,6 +590,9 @@
             [lineWrap configWithOrigin:points[i] row:i ctFrame:ctFrame convertHeight:height];
             [lineWrap configCTRunsWithCTFrame:ctFrame convertHeight:height considerGlyphs:considerGlyphs];
             [lineWrap configPreviousLine:previousLine];
+//            if (considerGlyphs) {
+//                [lineWrap configSideGlyph];
+//            }
             previousLine = lineWrap;
             [lineA addObject:lineWrap];
         }

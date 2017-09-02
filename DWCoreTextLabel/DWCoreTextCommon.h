@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
+#pragma mark --- DWPpsition ---
 typedef struct {
     CGFloat baseLineY;///基线纵坐标
     CGFloat xCrd;///x点横坐标
@@ -33,7 +34,9 @@ UIKIT_EXTERN DWPosition const DWPositionNull;
  @param height 位置高度
  @return 结构体
  */
-DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height);
+NS_INLINE DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height) {
+    return (DWPosition){baseLineY,xCrd,height};
+}
 
 
 /**
@@ -42,7 +45,9 @@ DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height);
  @param p 位置
  @return 基点
  */
-CGPoint DWPositionGetBaseOrigin(DWPosition p);
+NS_INLINE CGPoint DWPositionGetBaseOrigin(DWPosition p) {
+    return CGPointMake(p.xCrd, p.baseLineY);
+}
 
 
 /**
@@ -55,7 +60,9 @@ CGPoint DWPositionGetBaseOrigin(DWPosition p);
  注：
  baseLineY、xCrd、height均相同的两个位置才相同
  */
-BOOL DWPositionEqualToPosition(DWPosition p1,DWPosition p2);
+NS_INLINE BOOL DWPositionEqualToPosition(DWPosition p1,DWPosition p2) {
+    return (p1.baseLineY == p2.baseLineY) && (p1.xCrd == p2.xCrd) && (p1.height == p2.height);
+}
 
 
 /**
@@ -110,3 +117,15 @@ BOOL DWPositionBaseOriginEqualToPosition(DWPosition p1,DWPosition p2);
  @return 尺寸
  */
 CGRect CGRectFromPosition(DWPosition p,CGFloat width);
+
+#pragma mark --- NSRange ---
+/**
+ 零范围，{0,0}
+ */
+UIKIT_EXTERN NSRange const NSRangeZero;
+
+/**
+ 空范围，{MAXFLOAT,MAXFLOAT}
+ */
+UIKIT_EXTERN NSRange const NSRangeNull;
+
