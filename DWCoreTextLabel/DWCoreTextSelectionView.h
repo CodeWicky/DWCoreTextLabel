@@ -6,6 +6,11 @@
 //  Copyright © 2017年 Wicky. All rights reserved.
 //
 
+/**
+ 选中状态视图
+ 
+ 提供选中、插入状态的指示器及蒙版效果
+ */
 #import <UIKit/UIKit.h>
 #import "DWCoreTextCommon.h"
 @class DWCoreTextLayout;

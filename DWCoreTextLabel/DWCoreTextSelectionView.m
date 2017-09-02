@@ -34,11 +34,6 @@
         return YES;
     }
     NSComparisonResult result = DWComparePosition(startP, endP);
-//    if (result == NSOrderedSame) {
-//        [self.startGrabber hideCaret];
-//        [self.endGrabber hideCaret];
-//        return YES;
-//    }
     if (result == NSOrderedDescending) {
         DWPosition temp = startP;
         startP = endP;

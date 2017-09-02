@@ -44,3 +44,12 @@ NSRange const NSRangeZero = {0,0};
 
 NSRange const NSRangeNull = {MAXFLOAT,MAXFLOAT};
 
+NSRange NSMakeRangeBetweenLocation(NSUInteger loc1,NSUInteger loc2) {
+    if (loc1 > loc2) {
+        NSUInteger temp = loc1;
+        loc1 = loc2;
+        loc2 = temp;
+    }
+    return NSMakeRange(loc1, loc2 - loc1);
+}
+

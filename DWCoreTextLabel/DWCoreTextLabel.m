@@ -106,11 +106,11 @@ return;\
 ///当前选中的范围
 @property (nonatomic ,assign) NSRange seletedRange;
 
-///拖动开始位置
-@property (nonatomic ,assign) BOOL startGrab;
+///正在拖动
+@property (nonatomic ,assign) BOOL grabbing;
 
-///拖动结束位置
-@property (nonatomic ,assign) BOOL endGrab;
+///拖动模式下不变的位置
+@property (nonatomic ,assign) NSUInteger stableLoc;
 
 @end
 
@@ -861,14 +861,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     return exclusion;
 }
 
-/////校正路径并放入环绕数组
-//static inline void handleExclusionPathArr(NSMutableArray * container,NSArray * pathArr,CGFloat offset) {
-//    [pathArr enumerateObjectsUsingBlock:^(UIBezierPath * obj, NSUInteger idx, BOOL * _Nonnull stop) {
-//        translatePath(obj, offset);
-//        [container addObject:obj];
-//    }];
-//}
-
 #pragma mark --- 点击事件相关 ---
 ///将所有插入图片和活跃文本字典中的frame补全，重绘前调用
 -(void)handleFrameForActiveTextAndInsertImageWithCTFrame:(CTFrameRef)frame {
@@ -971,8 +963,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     BOOL success = [self.selectionView updateSelectedRects:rects startGrabberPosition:gA.startPosition endGrabberPosition:gB.endPosition];
     if (success) {
         self.seletedRange = NSMakeRange(gA.index, gB.index - gA.index + 1);
-        NSLog(@"selected ==== %@",NSStringFromRange(self.seletedRange));
-        
     } else {
         self.seletedRange = NSRangeNull;
     }
@@ -982,10 +972,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     [self.selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
 }
 
--(void)grabSelectWithStartGrab:(BOOL)startGrab {
-    
-}
-
 #pragma mark --- 获取点击行为 ---
 -(void)doubleClickAction:(UITapGestureRecognizer *)sender {
     CGPoint point = [sender locationInView:self];
@@ -993,21 +979,15 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     if (!glyph) {
         return;
     }
-    NSRange range = [self selectAtGlyphA:glyph glyphB:glyph];
-    if (NSEqualRanges(range, NSRangeNull)) {
+    [self selectAtRange:NSMakeRange(glyph.index, 1)];
+    if (NSEqualRanges(self.seletedRange, NSRangeNull)) {
         return;
     }
-    self.seletedRange = range;
-    if (!self.selectingMode) {
-        _selectingMode = YES;
-    }
+    _selectingMode = YES;
+    _selectGes.enabled = NO;
 }
 
 -(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    
-    
-    NSLog(@"touch begin");
-    
     CGPoint point = [[touches anyObject] locationInView:self];
     if (!self.selectingMode) {
         NSDictionary * dic = [self handleHasActionStatusWithPoint:point];
@@ -1022,18 +1002,18 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
             CGRect r = CGRectOffset(CGRectFromPosition(g.startPosition, 10), -5, 0);
             r = CGRectInset(r, 0, -5);
             if (CGRectContainsPoint(r, point)) {
-                _startGrab = YES;
+                _grabbing = YES;
+                _stableLoc = NSMaxRange(self.seletedRange);
             } else {
                 g = [_layout glyphAtLocation:NSMaxRange(self.seletedRange) - 1];
                 r = CGRectOffset(CGRectFromPosition(g.endPosition, 10), -5, 0);
                 r = CGRectInset(r, 0, -5);
                 if (CGRectContainsPoint(r, point)) {
-                    _endGrab = YES;
+                    _grabbing = YES;
+                    _stableLoc = self.seletedRange.location;
                 }
             }
-            if (_startGrab || _endGrab) {///拖动开始
-                [self grabSelectWithStartGrab:_startGrab];
-            } else {
+            if (!_grabbing) {///拖动开始
                 [self cancelSelected];
             }
             return;
@@ -1043,8 +1023,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 }
 
 -(void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    
-//    NSLog(@"touch move");
     CGPoint point = [[touches anyObject] locationInView:self];
     if (!self.selectingMode) {
         if (self.hasActionToDo) {
@@ -1063,31 +1041,9 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
             return;
         }
     } else {
-        if (_startGrab || _endGrab) {
+        if (_grabbing) {
             NSUInteger loc = [_layout closestLocFromPoint:point];
-            NSRange r = self.seletedRange;
-            if (_startGrab) {
-                NSUInteger max = NSMaxRange(r);
-                if (loc <= max) {
-                    r.location = loc;
-                    r.length = max - loc;
-                } else {
-                    r.location = max;
-                    r.length = loc - r.location;
-                    _startGrab = NO;
-                    _endGrab = YES;
-                }
-            } else {
-                NSUInteger min = r.location;
-                if (loc >= min) {
-                    r.length = loc - r.location;
-                } else {
-                    r.length = NSMaxRange(r) - loc;
-                    r.location = loc;
-                    _startGrab = YES;
-                    _endGrab = NO;
-                }
-            }
+            NSRange r = NSMakeRangeBetweenLocation(loc, self.stableLoc);
             [self selectAtRange:r];
             return;
         }
@@ -1097,8 +1053,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 }
 
 -(void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
-    
-    NSLog(@"touch end");
     if (!self.selectingMode) {
         if (self.hasActionToDo) {
             CGPoint point = [[touches anyObject] locationInView:self];
@@ -1121,11 +1075,11 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
             }
         }
     } else {
-        if (_startGrab || _endGrab) {
-            _startGrab = NO;
-            _endGrab = NO;
+        if (_grabbing) {
+            _grabbing = NO;
         } else {
             _selectingMode = NO;
+            _selectGes.enabled = YES;
         }
         return;
     }

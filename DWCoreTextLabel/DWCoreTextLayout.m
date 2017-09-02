@@ -168,6 +168,12 @@
 
 @end
 
+@interface DWCTLineWrapper ()
+
+@property (nonatomic ,strong) NSArray * totalLineRects;
+
+@end
+
 @implementation DWCTLineWrapper
 
 +(instancetype)createWrapperForCTLine:(CTLineRef)ctLine {
@@ -225,11 +231,6 @@
 -(void)configNextLine:(DWCTLineWrapper *)nextLine {
     _nextLine = nextLine;
 }
-
-//-(void)configSideGlyph {
-//    _firstGlyph = self.runs.firstObject.glyphs.firstObject;
-//    _lastGlyph = self.runs.lastObject.glyphs.lastObject;
-//}
 
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
@@ -520,11 +521,15 @@
     if (!line || !line.runs.count) {
         return @[];
     }
+    if (line.totalLineRects) {
+        return line.totalLineRects;
+    }
     DWCTRunWrapper * run = line.runs.firstObject;
     if (!run) {
         return @[];
     }
-    return [self rectInLineAtPoint:run.frame.origin backword:YES];
+    line.totalLineRects = [self rectInLineAtPoint:run.frame.origin backword:YES];
+    return line.totalLineRects;
 }
 
 #pragma mark --- 返回任意两个Run直接介于起始终止坐标之间的所有字形矩阵尺寸数组 ---
@@ -590,9 +595,6 @@
             [lineWrap configWithOrigin:points[i] row:i ctFrame:ctFrame convertHeight:height];
             [lineWrap configCTRunsWithCTFrame:ctFrame convertHeight:height considerGlyphs:considerGlyphs];
             [lineWrap configPreviousLine:previousLine];
-//            if (considerGlyphs) {
-//                [lineWrap configSideGlyph];
-//            }
             previousLine = lineWrap;
             [lineA addObject:lineWrap];
         }

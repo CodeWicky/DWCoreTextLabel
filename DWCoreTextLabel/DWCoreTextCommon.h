@@ -129,3 +129,5 @@ UIKIT_EXTERN NSRange const NSRangeZero;
  */
 UIKIT_EXTERN NSRange const NSRangeNull;
 
+NSRange NSMakeRangeBetweenLocation(NSUInteger loc1,NSUInteger loc2);
+

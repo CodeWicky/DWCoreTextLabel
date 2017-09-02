@@ -117,12 +117,6 @@
 ///结束位置(不包含)
 @property (nonatomic ,assign ,readonly) NSUInteger endIndex;
 
-/////第一个字形
-//@property (nonatomic ,weak ,readonly) DWGlyphWrapper * firstGlyph;
-//
-/////最后一个字形
-//@property (nonatomic ,weak ,readonly) DWGlyphWrapper * lastGlyph;
-
 ///上一行
 @property (nonatomic ,weak ,readonly) DWCTLineWrapper * previousLine;
 

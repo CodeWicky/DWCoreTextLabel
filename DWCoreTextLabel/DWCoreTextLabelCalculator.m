@@ -299,15 +299,15 @@ CGRect DWFixRectToXCrd(CGRect rect,CGFloat xCrd,NSComparisonResult result,BOOL b
         return CGRectZero;
     }
     if (result == NSOrderedDescending) {
-        CGFloat width = xCrd - rect.origin.x;
-        rect.size.width = width;
+        rect.size.width = xCrd - rect.origin.x;
     } else if (result == NSOrderedAscending) {
+        rect.size.width += rect.origin.x - xCrd;
         rect.origin.x = xCrd;
     } else if (backward) {
+        rect.size.width += rect.origin.x - xCrd;
         rect.origin.x = xCrd;
     } else {
-        CGFloat width = xCrd - rect.origin.x;
-        rect.size.width = width;
+        rect.size.width = xCrd - rect.origin.x;
     }
     if (CGRectGetWidth(rect) <= 0) {
         return CGRectZero;
