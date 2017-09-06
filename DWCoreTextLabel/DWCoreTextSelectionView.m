@@ -20,6 +20,10 @@
 
 @property (nonatomic ,strong) DWCoreTextCaretView * caret;
 
+@property (nonatomic ,strong) NSArray * selArr;
+
+@property (nonatomic ,strong) NSMutableArray * selectedRects;
+
 @end
 
 @implementation DWCoreTextSelectionView
@@ -48,9 +52,11 @@
 }
 
 -(BOOL)updateSelectedRects:(NSArray *)rects {
+    [self hideSelectMenu];
     [self.maskViewsContainer.subviews makeObjectsPerformSelector:@selector(removeFromSuperview)];///移除全部遮罩
     CGRect box = self.maskViewsContainer.bounds;
     __block BOOL updated = NO;
+    NSMutableArray * selectedRects = @[].mutableCopy;
     [rects enumerateObjectsUsingBlock:^(NSValue * obj, NSUInteger idx, BOOL * _Nonnull stop) {
         CGRect rect = [obj CGRectValue];
         if (CGRectIsEmpty(rect) || CGRectIsEmpty(CGRectIntersection(rect, box))) {
@@ -59,10 +65,14 @@
         if (!updated) {
             updated = YES;
         }
+        [selectedRects addObject:obj];
         UIView * mask = [[UIView alloc] initWithFrame:rect];
         mask.backgroundColor = [UIColor colorWithRed:30 / 255.0 green:144 / 255.0 blue:1 alpha:0.3];
         [self.maskViewsContainer addSubview:mask];
     }];
+    if (updated) {
+        self.selectedRects = selectedRects;
+    }
     return updated;
 }
 
@@ -90,6 +100,61 @@
     return YES;
 }
 
+-(void)showSelectMenu {
+    __block CGRect rect = [self.selectedRects.firstObject CGRectValue];
+    [self.selectedRects enumerateObjectsUsingBlock:^(NSValue * obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (idx == 0) {
+            return;
+        }
+        rect = CGRectUnion(rect, obj.CGRectValue);
+    }];
+    [self showSelectMenuInRect:rect];
+}
+
+-(void)hideSelectMenu {
+    UIMenuController * menu = [UIMenuController sharedMenuController];
+    [menu setMenuVisible:NO];
+}
+
+-(void)showSelectMenuInRect:(CGRect)rect {
+    [self becomeFirstResponder];
+    UIMenuController * menu = [UIMenuController sharedMenuController];
+    NSMutableArray * actions = @[].mutableCopy;
+    if (self.selectAction & DWSelectActionCopy) {
+        [actions addObject:[[UIMenuItem alloc] initWithTitle:@"复制" action:@selector(dw_copy:)]];
+    }
+    if (self.selectAction & DWSelectActionCut) {
+        [actions addObject:[[UIMenuItem alloc] initWithTitle:@"剪切" action:@selector(dw_cut:)]];
+    }
+    if (self.selectAction & DWSelectActionPaste) {
+        [actions addObject:[[UIMenuItem alloc] initWithTitle:@"粘贴" action:@selector(dw_paste:)]];
+    }
+    if (self.selectAction & DWSelectActionSelectAll) {
+        [actions addObject:[[UIMenuItem alloc] initWithTitle:@"全选" action:@selector(dw_selectAll:)]];
+    }
+    if (self.selectAction & DWSelectActionDelete) {
+        [actions addObject:[[UIMenuItem alloc] initWithTitle:@"删除" action:@selector(dw_delete:)]];
+    }
+    if (self.selectAction & DWSelectActionCustom) {
+        
+        if (self.customSelectItems.count) {
+            __block NSMutableArray * temp = @[].mutableCopy;
+            [self.customSelectItems enumerateObjectsUsingBlock:^(DWCoreTextMenuItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                [temp addObject:[[UIMenuItem alloc] initWithTitle:obj.title action:obj.action]];
+            }];
+            [actions addObjectsFromArray:temp];
+        }
+    }
+    menu.menuItems = actions;
+    [menu setTargetRect:rect inView:self];
+    [menu setMenuVisible:YES animated:YES];
+}
+
+-(NSArray *)customSelectActions {
+    NSMutableArray * arr = @[].mutableCopy;
+    return arr.copy;
+}
+
 -(void)setFrame:(CGRect)frame {
     [super setFrame:frame];
     self.maskViewsContainer.frame = self.bounds;
@@ -110,6 +175,80 @@
         [self addSubview:_indicatorContainer];
     }
     return _indicatorContainer;
+}
+
+-(BOOL)canBecomeFirstResponder {
+    return YES;
+}
+
+-(BOOL)canPerformAction:(SEL)action withSender:(id)sender {
+    NSString * actionStr = NSStringFromSelector(action);
+    DWSelectAction actionO = DWSelectActionNone;
+    if ([actionStr isEqualToString:@"dw_cut:"]) {
+        actionO = DWSelectActionCut;
+    } else if ([actionStr isEqualToString:@"dw_copy:"]) {
+        actionO = DWSelectActionCopy;
+    } else if ([actionStr isEqualToString:@"dw_paste:"]) {
+        actionO = DWSelectActionPaste;
+    } else if ([actionStr isEqualToString:@"dw_selectAll:"]) {
+        actionO = DWSelectActionSelectAll;
+    } else if ([actionStr isEqualToString:@"dw_delete:"]) {
+        actionO = DWSelectActionDelete;
+    } else {
+        if ([self.selArr containsObject:actionStr]) {
+            actionO = DWSelectActionCustom;
+        }
+    }
+    return (self.selectAction & actionO) && !(actionO & DWSelectActionNone);
+}
+
+-(void)dw_cut:(UIMenuController *)menu {
+    if (self.selectActionCallBack) {
+        self.selectActionCallBack(DWSelectActionCut);
+    }
+}
+
+-(void)dw_copy:(UIMenuController *)menu {
+    if (self.selectActionCallBack) {
+        self.selectActionCallBack(DWSelectActionCopy);
+    }
+}
+
+-(void)dw_paste:(UIMenuController *)menu {
+    if (self.selectActionCallBack) {
+        self.selectActionCallBack(DWSelectActionPaste);
+    }
+}
+
+-(void)dw_selectAll:(UIMenuController *)menu {
+    if (self.selectActionCallBack) {
+        self.selectActionCallBack(DWSelectActionSelectAll);
+    }
+}
+
+-(void)dw_delete:(UIMenuController *)menu {
+    if (self.selectActionCallBack) {
+        self.selectActionCallBack(DWSelectActionDelete);
+    }
+}
+
+-(id)forwardingTargetForSelector:(SEL)aSelector {
+    __block id target = nil;
+    [self.customSelectItems enumerateObjectsUsingBlock:^(DWCoreTextMenuItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (aSelector == obj.action) {
+            target = obj.target;
+            *stop = YES;
+        }
+    }];
+    return target;
+}
+
+-(NSArray *)selArr {
+    NSMutableArray * arr = @[].mutableCopy;
+    [self.customSelectItems enumerateObjectsUsingBlock:^(DWCoreTextMenuItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        [arr addObject:NSStringFromSelector(obj.action)];
+    }];
+    return arr.copy;
 }
 
 -(DWCoreTextCaretView *)caret {
@@ -271,4 +410,8 @@ CABasicAnimation * DWCoreTextCaretBlinkAnimation () {
 -(void)setBlinks:(BOOL)blinks {
     ///不做动作
 }
+@end
+
+@implementation DWCoreTextMenuItem
+
 @end

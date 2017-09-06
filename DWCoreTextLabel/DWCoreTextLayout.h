@@ -8,6 +8,9 @@
 
 /**
  布局类，统一管理布局信息
+ 
+ version 1.0.0
+ 提供基础方法，方便布局计算（当前省略号处会导致CTRunGetStringRange及CTLineGetOffsetForStringIndex两个函数计算错误，尚未找到原因，通过特征信息判断后予以修复，日后找到原因后应寻找更加适合的修正方式）
  */
 
 #import <Foundation/Foundation.h>
@@ -148,6 +151,11 @@
 ///具有响应事件的图片的配置数组（Layout仅处理插入图片的图片配置数组，对于Path绘制的不处理）
 @property (nonatomic ,strong ,readonly) NSArray * activeImageConfigs;
 
+/////当前选中范围
+//@property (nonatomic ,assign) NSRange selectedRange;
+
+@property (nonatomic ,assign ,readonly) NSRange maxRange;
+
 
 /**
  生成布局计算类
@@ -207,6 +215,7 @@
 -(NSArray *)selectedRectsBetweenLocationA:(NSUInteger)locA andLocationB:(NSUInteger)locB;
 -(NSArray *)selectedRectsBetweenPointA:(CGPoint)pointA andPointB:(CGPoint)pointB;
 -(NSArray *)selectedRectsInRange:(NSRange)range;
+-(NSArray *)selectedAllRects;
 
 
 /**

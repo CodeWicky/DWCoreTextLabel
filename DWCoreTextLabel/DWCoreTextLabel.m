@@ -963,11 +963,15 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     BOOL success = [self.selectionView updateSelectedRects:rects startGrabberPosition:gA.startPosition endGrabberPosition:gB.endPosition];
     if (success) {
         self.seletedRange = NSMakeRange(gA.index, gB.index - gA.index + 1);
+        [_selectionView showSelectMenu];
     } else {
         self.seletedRange = NSRangeNull;
     }
 }
 
+-(void)selectAll {
+    [self selectAtRange:_layout.maxRange];
+}
 -(void)cancelSelected {
     [self.selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
 }
@@ -1077,6 +1081,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     } else {
         if (_grabbing) {
             _grabbing = NO;
+            [_selectionView showSelectMenu];
         } else {
             _selectingMode = NO;
             _selectGes.enabled = YES;
@@ -1579,6 +1584,15 @@ static CGFloat widthCallBacks(void * ref) {
 -(DWCoreTextSelectionView *)selectionView {
     if (!_selectionView) {
         _selectionView = [[DWCoreTextSelectionView alloc] initWithFrame:self.bounds];
+        _selectionView.selectAction = DWSelectActionCopy | DWSelectActionSelectAll;
+        __weak typeof(self)weakSelf = self;
+        _selectionView.selectActionCallBack = ^(DWSelectAction action) {
+            if (action & DWSelectActionCopy) {
+                [UIPasteboard generalPasteboard].string = [weakSelf.mAStr.string substringWithRange:weakSelf.seletedRange];
+            } else if (action & DWSelectActionSelectAll) {
+                [weakSelf selectAll];
+            }
+        };
         [self addSubview:_selectionView];
     }
     return _selectionView;

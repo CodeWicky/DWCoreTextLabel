@@ -14,8 +14,34 @@
 #import <UIKit/UIKit.h>
 #import "DWCoreTextCommon.h"
 @class DWCoreTextLayout;
+@class DWCoreTextMenuItem;
 
+typedef NS_OPTIONS(NSUInteger, DWSelectAction) {
+    DWSelectActionNone = 1 << 0,///无动作
+    DWSelectActionCut = 1 << 1,///剪切
+    DWSelectActionCopy = 1 << 2,///复制
+    DWSelectActionPaste = 1 << 3,///粘贴
+    DWSelectActionSelectAll = 1 << 4,///全选
+    DWSelectActionDelete = 1 << 5,///删除
+    DWSelectActionCustom = 1 << 6,///自定制
+};
+
+
+/**
+ 选中效果视图
+ 
+ 提供选中效果及选中后的动作目录，提供插入指示器、拖动指示器
+ */
 @interface DWCoreTextSelectionView : UIView
+
+///选中目录动作
+@property (nonatomic ,assign) DWSelectAction selectAction;
+
+///自定义目录项
+@property (nonatomic ,strong) NSArray <DWCoreTextMenuItem *>* customSelectItems;
+
+///预置动作回调
+@property (nonatomic ,copy) void (^selectActionCallBack)(DWSelectAction action);
 
 /**
  更新选中区域
@@ -59,8 +85,32 @@
  */
 -(BOOL)updateCaretWithPosition:(DWPosition)position;
 
+
+/**
+ 展示选择目录
+
+ @param rect 要展示的位置
+ */
+-(void)showSelectMenuInRect:(CGRect)rect;
+
+
+/**
+ 以当前选中区域自动展示选择目录
+ */
+-(void)showSelectMenu;
+
+
+/**
+ 隐藏选择目录
+ */
+-(void)hideSelectMenu;
+
 @end
 
+
+/**
+ 插入指示器视图
+ */
 @interface DWCoreTextCaretView : UIView
 
 ///是否闪烁
@@ -120,5 +170,27 @@
 @interface DWCoreTextGrabber : DWCoreTextCaretView
 
 @property (nonatomic ,assign) BOOL startGrabber;
+
+@end
+
+/**
+ SelectView选中目录项
+ 
+ 本类配合selectionView的customSelectItems属性使用。
+ 由于UIMenuController自身实现导致，其所需动作实现须由其所对应添加的View实现。
+ 由于SelectView中会将menu添加在自身上，而导致未实现对应的custom的动作导致崩溃。
+ 为实现可扩展性custom属性有存在的必要性，故借助本类以及消息转发机制将消息转发至target对象，实现相应动作。
+ customSelectItems数组中加入本类实例，selectionView会将对应消息转发至target。
+ */
+@interface DWCoreTextMenuItem : NSObject
+
+///目录标题
+@property (nonatomic ,strong) NSString * title;
+
+///目录动作
+@property (nonatomic ,assign) SEL action;
+
+///目录动作target
+@property (nonatomic ,weak) id target;
 
 @end

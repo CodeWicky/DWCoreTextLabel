@@ -78,6 +78,18 @@
 -(void)configPreviousRun:(DWCTRunWrapper *)preRun {
     _previousRun = preRun;
     [preRun configNextRun:self];
+    [self fixRunOriginX];
+}
+
+///TODO:针对省略号时CTLineGetOffsetForStringIndex无法正确计算结果返回0进行修正,以及range计算错误需要修复
+-(void)fixRunOriginX {
+    if (_previousRun && (CGRectGetMinX(self.frame) < CGRectGetMaxX(_previousRun.frame))) {
+        CGRect frame = self.frame;
+        frame.origin.x = CGRectGetMaxX(_previousRun.frame);
+        _frame = frame;
+        _startIndex += _previousRun.endIndex;
+        _endIndex += _previousRun.endIndex;
+    }
 }
 
 -(void)configNextRun:(DWCTRunWrapper *)nextRun {
@@ -95,6 +107,19 @@
         NSUInteger index = _startIndex + i;
         CGFloat startXCrd = origin.x + CTLineGetOffsetForStringIndex(ctLine, index, NULL) + offset;
         CGFloat endXCrd = origin.x + CTLineGetOffsetForStringIndex(ctLine, index + 1, NULL) + offset;
+        
+        ///TODO:修复省略号前后CTLineGetOffsetForStringIndex计算不正确影响(尚未找到原因，只能手动修复)
+        if (startXCrd < CGRectGetMinX(_frame)) {
+            if (i == 0) {
+                startXCrd = CGRectGetMinX(_frame);
+            }
+        }
+        if (endXCrd < startXCrd) {
+            if (i == count - 1) {
+                endXCrd = CGRectGetMaxX(_frame);
+            }
+        }
+        
         DWGlyphWrapper * wrapper = [[DWGlyphWrapper alloc] initWithIndex:index startXCrd:startXCrd endXCrd:endXCrd];
         [wrapper configRun:self];
         [wrapper configPreviousGlyph:preGlyph];
@@ -434,6 +459,7 @@
     CGFloat endXCrd = [self glyphAtLocation:locationB].endXCrd;
     DWCTRunWrapper * startRun = [self runAtLocation:locationA];
     DWCTRunWrapper * endRun = [self runAtLocation:locationB];
+    
     return [self rectsInLayoutWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
 }
 
@@ -453,6 +479,10 @@
 
 -(NSArray *)selectedRectsInRange:(NSRange)range {
     return [self selectedRectsBetweenLocationA:range.location andLocationB:range.location + range.length];
+}
+
+-(NSArray *)selectedAllRects {
+    return [self selectedRectsBetweenLocationA:0 andLocationB:_maxLoc];
 }
 
 ///返回run中对应的坐标之间的rect
@@ -731,6 +761,11 @@
             }
         }
     }
+}
+
+#pragma mark --- setter/getter ---
+-(NSRange)maxRange {
+    return NSMakeRange(0, _maxLoc);
 }
 
 @end
