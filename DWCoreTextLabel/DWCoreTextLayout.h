@@ -11,7 +11,7 @@
  
  version 1.0.0
  提供基础方法，方便布局计算（当前省略号处会导致CTRunGetStringRange及CTLineGetOffsetForStringIndex两个函数计算错误，尚未找到原因，通过特征信息判断后予以修复，日后找到原因后应寻找更加适合的修正方式）
- 修复中英文计算高度问题
+ 修复中英文计算高度问题(图片padding问题待改进)
  */
 
 #import <Foundation/Foundation.h>
