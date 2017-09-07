@@ -13,6 +13,7 @@ typedef struct {
     CGFloat baseLineY;///基线纵坐标
     CGFloat xCrd;///x点横坐标
     CGFloat height;///高度
+    NSUInteger index;///角标
 } DWPosition;
 
 /**
@@ -34,8 +35,8 @@ UIKIT_EXTERN DWPosition const DWPositionNull;
  @param height 位置高度
  @return 结构体
  */
-NS_INLINE DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height) {
-    return (DWPosition){baseLineY,xCrd,height};
+NS_INLINE DWPosition DWMakePosition(CGFloat baseLineY,CGFloat xCrd,CGFloat height,NSUInteger index) {
+    return (DWPosition){baseLineY,xCrd,height,index};
 }
 
 
@@ -58,7 +59,7 @@ NS_INLINE CGPoint DWPositionGetBaseOrigin(DWPosition p) {
  @return 比较结果
  
  注：
- baseLineY、xCrd、height均相同的两个位置才相同
+ baseLineY、xCrd、height相同的两个位置即相同
  */
 NS_INLINE BOOL DWPositionEqualToPosition(DWPosition p1,DWPosition p2) {
     return (p1.baseLineY == p2.baseLineY) && (p1.xCrd == p2.xCrd) && (p1.height == p2.height);

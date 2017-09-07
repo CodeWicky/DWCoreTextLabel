@@ -963,7 +963,6 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     BOOL success = [self.selectionView updateSelectedRects:rects startGrabberPosition:gA.startPosition endGrabberPosition:gB.endPosition];
     if (success) {
         self.seletedRange = NSMakeRange(gA.index, gB.index - gA.index + 1);
-        [_selectionView showSelectMenu];
     } else {
         self.seletedRange = NSRangeNull;
     }
@@ -973,7 +972,16 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     [self selectAtRange:_layout.maxRange];
 }
 -(void)cancelSelected {
-    [self.selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
+    [_selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
+    [self hideMenu];
+}
+
+-(void)showMenu {
+    [_selectionView showSelectMenu];
+}
+
+-(void)hideMenu {
+    [_selectionView hideSelectMenu];
 }
 
 #pragma mark --- 获取点击行为 ---
@@ -984,6 +992,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         return;
     }
     [self selectAtRange:NSMakeRange(glyph.index, 1)];
+    [self showMenu];
     if (NSEqualRanges(self.seletedRange, NSRangeNull)) {
         return;
     }
@@ -1081,7 +1090,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     } else {
         if (_grabbing) {
             _grabbing = NO;
-            [_selectionView showSelectMenu];
+            [self showMenu];
         } else {
             _selectingMode = NO;
             _selectGes.enabled = YES;

@@ -239,14 +239,28 @@ void translatePath(UIBezierPath * path,CGFloat offsetY) {
 
 
 #pragma mark --- 比较方法 ---
+///在一定精度内判断两个浮点数是否相等
+BOOL DWFixEqual(CGFloat a,CGFloat b) {
+    if (fabs(a - b) < 1e-6) {
+        return YES;
+    }
+    return NO;
+}
+
 ///返回给定数在所给范围中的相对位置
 NSComparisonResult DWNumBetweenAB(CGFloat num,CGFloat a,CGFloat b) {
     if (a > b) {
         DWSwapfAB(&a, &b);
     }
     if (num < a) {
+        if (DWFixEqual(a,num)) {
+            return NSOrderedSame;
+        }
         return NSOrderedAscending;
     } else if (num > b) {
+        if (DWFixEqual(b,num)) {
+            return NSOrderedSame;
+        }
         return NSOrderedDescending;
     } else {
         return NSOrderedSame;

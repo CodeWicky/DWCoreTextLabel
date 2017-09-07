@@ -37,8 +37,7 @@
         [self.endGrabber hideCaret];
         return YES;
     }
-    NSComparisonResult result = DWComparePosition(startP, endP);
-    if (result == NSOrderedDescending) {
+    if (DWComparePosition(startP, endP) == NSOrderedDescending) {
         DWPosition temp = startP;
         startP = endP;
         endP = temp;
@@ -318,11 +317,11 @@
 }
 
 -(void)updateHeight:(CGFloat)height {
-    [self moveToPosition:DWMakePosition(CGRectGetMaxY(self.frame), CGRectGetMinX(self.frame), height)];
+    [self moveToPosition:DWMakePosition(CGRectGetMaxY(self.frame), CGRectGetMinX(self.frame), height,0)];
 }
 
 -(void)moveToBaseLineY:(CGFloat)baseLineY xCrd:(CGFloat)xCrd {
-    [self moveToPosition:DWMakePosition(baseLineY, xCrd, CGRectGetHeight(self.frame))];
+    [self moveToPosition:DWMakePosition(baseLineY, xCrd, CGRectGetHeight(self.frame),0)];
 }
 
 -(void)moveToPosition:(DWPosition)position {
@@ -330,7 +329,7 @@
     CGFloat oB = CGRectGetMaxY(frame);
     CGFloat oX = CGRectGetMinX(frame);
     CGFloat oH = CGRectGetHeight(frame);
-    DWPosition oP = DWMakePosition(oB, oX, oH);
+    DWPosition oP = DWMakePosition(oB, oX, oH,0);
     if (!DWPositionEqualToPosition(position, oP)) {
         frame.origin.y = position.baseLineY - position.height;
         frame.origin.x = position.xCrd;
