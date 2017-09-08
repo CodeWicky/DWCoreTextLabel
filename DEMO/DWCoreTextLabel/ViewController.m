@@ -10,6 +10,7 @@
 #import "DWCoreTextLabel.h"
 #import "DWCoreTextSelectionView.h"
 #import "DWCoreTextCommon.h"
+#import "DWCoreTextLabelCalculator.h"
 @interface ViewController ()<DWCoreTextLabelDelegate>
 
 @property (nonatomic ,strong) DWCoreTextLabel * label;
@@ -91,6 +92,11 @@
 //    item2.title = @"custom2";
 //    view.customSelectItems = @[item,item2];
 //    self.aView = view;
+    
+//    CGRect origin = CGRectMake(0,0, 100, 100);
+//    CGRect target = CGRectMake(100, 100, 100, 100);
+//    NSLog(@"%@",DWRectsBeyondRect(target, origin));
+    
 }
 
 -(void)tap {

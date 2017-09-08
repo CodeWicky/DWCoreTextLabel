@@ -973,6 +973,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 }
 -(void)cancelSelected {
     [_selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];
+    self.seletedRange = NSRangeNull;
     [self hideMenu];
 }
 

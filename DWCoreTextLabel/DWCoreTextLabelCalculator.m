@@ -372,6 +372,100 @@ NSComparisonResult DWComparePoint(CGPoint p1,CGPoint p2) {
     return NSOrderedDescending;
 }
 
+#pragma mark --- 尺寸组合方法 ---
+
+NSValue * DWValueFromRect(CGRect rect) {
+    return [NSValue valueWithCGRect:rect];
+}
+
+NSValue * DWRectValue(CGFloat x,CGFloat y,CGFloat w,CGFloat h) {
+    return DWValueFromRect(CGRectMake(x, y, w, h));
+}
+
+NSArray * DWRectsBeyondRect(CGRect target,CGRect origin) {
+    if (!CGRectIntersectsRect(origin, target)) {
+        return @[DWValueFromRect(target)];
+    }
+    if (CGRectContainsRect(origin,target)) {
+        return @[];
+    }
+    if (CGRectContainsRect(target, origin)) {
+        return nil;
+    }
+    CGRect intersectR = CGRectIntersection(target, origin);
+    NSInteger section = 0;
+    if (CGRectGetMinY(intersectR) == CGRectGetMinY(target)) {///上边
+        section += 1;
+    }
+    if (CGRectGetMinX(intersectR) == CGRectGetMinX(target)) {///左边
+        section += 2;
+    }
+    if (CGRectGetMaxY(intersectR) == CGRectGetMaxY(target)) {///下边
+        section += 4;
+    }
+    if (CGRectGetMaxX(intersectR) == CGRectGetMaxX(target)) {///右边
+        section += 8;
+    }
+    //  ________________   ________________    ________________    _______________
+    //  |  3 | 1  | 9  |   |    |    |    |    |    |    |    |    |        |    |
+    //  |____|____|____|   |____|____|____|    |____|    |____|    |        |    |
+    //  |  2 | 0  | 8  |   |       10     |    |    | 5  |    |    |   7    |    |
+    //  |____|____|____|   |______________|    |____|    |____|    |        |    |
+    //  |  6 | 4  | 12 |   |    |    |    |    |    |    |    |    |        |    |
+    //  |____|____|____|   |____|____|____|    |____|____|____|    |________|____|
+    //
+    //
+    //  ________________   ________________    ________________
+    //  |              |   |    |         |    |              |
+    //  |______________|   |    |         |    |      11      |
+    //  |              |   |    |   13    |    |              |
+    //  |      14      |   |    |         |    |______________|
+    //  |              |   |    |         |    |              |
+    //  |______________|   |____|_________|    |______________|
+    //
+    NSMutableArray * arr = @[].mutableCopy;
+    if (section == 1) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, CGRectGetMinX(intersectR) - CGRectGetMinX(target), target.size.height)];
+        [arr addObjectsFromArray:DWRectsBeyondRect(CGRectMake(intersectR.origin.x, intersectR.origin.y, CGRectGetMaxX(target) - CGRectGetMinX(intersectR), target.size.height), origin)];
+    } else if (section == 2) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, intersectR.origin.y - target.origin.y)];
+        [arr addObjectsFromArray:DWRectsBeyondRect(CGRectMake(intersectR.origin.x, intersectR.origin.y, target.size.width, CGRectGetMaxY(target) - intersectR.origin.y), origin)];
+    } else if (section == 3) {
+        [arr addObject:DWRectValue(CGRectGetMaxX(intersectR), target.origin.y, target.size.width - intersectR.size.width, target.size.height)];
+        [arr addObject:DWRectValue(target.origin.x, CGRectGetMaxY(intersectR), intersectR.size.width, target.size.height - intersectR.size.height)];
+    } else if (section == 4) {
+        [arr addObject:DWRectValue(CGRectGetMaxX(intersectR), target.origin.y, CGRectGetMaxX(target) - CGRectGetMaxX(intersectR), target.size.height)];
+        [arr addObjectsFromArray:DWRectsBeyondRect(CGRectMake(target.origin.x, target.origin.y, CGRectGetMaxX(intersectR) - target.origin.x, target.size.height), origin)];
+    } else if (section == 5) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, CGRectGetMinX(intersectR) - CGRectGetMinX(target), target.size.height)];
+        [arr addObject:DWRectValue(CGRectGetMaxX(intersectR), intersectR.origin.y, CGRectGetMaxX(target) - CGRectGetMaxX(intersectR), target.size.height)];
+    } else if (section == 6) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, target.size.height - intersectR.size.height)];
+        [arr addObject:DWRectValue(CGRectGetMaxX(intersectR), intersectR.origin.y, target.size.width - intersectR.size.width, intersectR.size.height)];
+    } else if (section == 7) {
+        [arr addObject:DWRectValue(CGRectGetMaxX(intersectR), target.origin.y, target.size.width - intersectR.size.width, target.size.height)];
+    } else if (section == 8) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, intersectR.origin.y - target.origin.y)];
+        [arr addObjectsFromArray:DWRectsBeyondRect(CGRectMake(target.origin.x, intersectR.origin.y, target.size.width, CGRectGetMaxY(target) - intersectR.origin.y), origin)];
+    } else if (section == 9) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width - intersectR.size.width, intersectR.size.height)];
+        [arr addObject:DWRectValue(target.origin.x,CGRectGetMaxY(intersectR), target.size.width, target.size.height - intersectR.size.height)];
+    } else if (section == 10) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, CGRectGetMinY(intersectR) - CGRectGetMinY(target))];
+        [arr addObject:DWRectValue(intersectR.origin.x, CGRectGetMaxY(intersectR), target.size.width, CGRectGetMaxY(target) - CGRectGetMaxY(intersectR))];
+    } else if (section == 11) {
+        [arr addObject:DWRectValue(target.origin.x, CGRectGetMaxY(intersectR), target.size.width, target.size.height - intersectR.size.height)];
+    } else if (section == 12) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, target.size.height - intersectR.size.height)];
+        [arr addObject:DWRectValue(target.origin.x, CGRectGetMaxY(target) - intersectR.size.height, target.size.width - intersectR.size.width, intersectR.size.height)];
+    } else if (section == 13) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width - intersectR.size.width, target.size.height)];
+    } else if (section == 14) {
+        [arr addObject:DWRectValue(target.origin.x, target.origin.y, target.size.width, target.size.height - intersectR.size.height)];
+    }
+    return arr.copy;
+}
+
 
 #pragma mark --- 交换对象方法 ---
 ///交换浮点数

@@ -308,6 +308,22 @@ CGRect DWLengthenRectToXCrd(CGRect rect,CGFloat xCrd);
  */
 NSComparisonResult DWComparePoint(CGPoint p1,CGPoint p2);
 
+#pragma mark --- 尺寸组合方法 ---
+
+/**
+ 返回target中不在origin范围内的尺寸集合
+
+ @param target 待分隔的尺寸
+ @param origin 分隔参照的尺寸
+ @return target中不在origin范围内的尺寸集合
+ 
+ 注：
+ 当target包含origin是返回nil。
+ 当origin包含target是返回空数组。
+ 当没有交集是返回target
+ 其余返回不在origin范围内的尺寸集合
+ */
+NSArray * DWRectsBeyondRect(CGRect target,CGRect origin);
 
 #pragma mark --- 交换对象方法 ---
 ///交换两个浮点数
