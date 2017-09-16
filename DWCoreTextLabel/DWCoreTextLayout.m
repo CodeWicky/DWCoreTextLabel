@@ -14,10 +14,14 @@
 -(instancetype)initWithIndex:(NSUInteger)index startXCrd:(CGFloat)startXCrd endXCrd:(CGFloat)endXCrd {
     if (self = [super init]) {
         _index = index;
-        _startXCrd = startXCrd;
-        _endXCrd = endXCrd;
+        [self configStartXCrd:startXCrd endXCrd:endXCrd];
     }
     return self;
+}
+
+-(void)configStartXCrd:(CGFloat)startXCrd endXCrd:(CGFloat)endXCrd {
+    _startXCrd = startXCrd;
+    _endXCrd = endXCrd;
 }
 
 -(void)configRun:(DWCTRunWrapper *)run {
@@ -100,8 +104,8 @@
     NSUInteger count = CTRunGetGlyphCount(_ctRun);
     NSMutableArray * temp = @[].mutableCopy;
     DWGlyphWrapper * preGlyph = nil;
-    CGFloat baseLineY = CGRectGetMaxY(self.frame);
-    CGFloat height = CGRectGetHeight(self.frame);
+    CGFloat baseLineY = CGRectGetMaxY(_line.frame);
+    CGFloat height = CGRectGetHeight(_line.frame);
     for (int i = 0; i < count; i ++) {
         CGFloat offset = getCTFramePahtXOffset(ctFrame);
         NSUInteger index = _startIndex + i;
@@ -162,6 +166,13 @@
             CGFloat padding = [dic[@"padding"] floatValue];
             if (padding != 0) {
                 deleteBounds = CGRectInset(deleteBounds, padding, 0);
+            }
+            _imageRect = deleteBounds;
+            if (_glyphs.count) {
+                DWGlyphWrapper * g = self.glyphs.firstObject;
+                [g configStartXCrd:CGRectGetMinX(deleteBounds) endXCrd:CGRectGetMaxX(deleteBounds)];
+                DWPosition p = g.startPosition;
+                [g configPositionWithBaseLineY:p.baseLineY height:p.height];
             }
             if (!CGRectEqualToRect(deleteBounds, CGRectZero)) {
                 dic[@"frame"] = [NSValue valueWithCGRect:deleteBounds];
@@ -458,24 +469,24 @@
     locationB --;//函数出入的是不包含的locationB，所以自减至包含位置
     CGFloat startXCrd = [self xCrdAtLocation:locationA];
     CGFloat endXCrd = [self glyphAtLocation:locationB].endXCrd;
-    DWCTRunWrapper * startRun = [self runAtLocation:locationA];
-    DWCTRunWrapper * endRun = [self runAtLocation:locationB];
+    DWCTLineWrapper * startLine = [self lineAtLocation:locationA];
+    DWCTLineWrapper * endLine = [self lineAtLocation:locationB];
     
-    return [self rectsInLayoutWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+    return [self rectsInLayoutWithStartLine:startLine startXCrd:startXCrd endLine:endLine endXCrd:endXCrd];
 }
 
 -(NSArray *)selectedRectsBetweenPointA:(CGPoint)pointA andPointB:(CGPoint)pointB {
-    DWCTRunWrapper * startRun = [self runAtPoint:pointA];
-    DWCTRunWrapper * endRun = [self runAtPoint:pointB];
-    if (startRun.startIndex > endRun.startIndex) {///保证小点在前
-        DWSwapoAB(startRun, endRun);
+    DWCTLineWrapper * startLine = [self lineAtPoint:pointA];
+    DWCTLineWrapper * endLine = [self lineAtPoint:pointB];
+    if (startLine.startIndex > endLine.startIndex) {///保证小点在前
+        DWSwapoAB(startLine, endLine);
         CGPoint temp = pointA;
         pointA = pointB;
         pointB = temp;
     }
     CGFloat startXCrd = [self xCrdAtPoint:pointA];
     CGFloat endXCrd = [self xCrdAtPoint:pointB];
-    return [self rectsInLayoutWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+    return [self rectsInLayoutWithStartLine:startLine startXCrd:startXCrd endLine:endLine endXCrd:endXCrd];
 }
 
 -(NSArray *)selectedRectsInRange:(NSRange)range {
@@ -487,15 +498,24 @@
 }
 
 ///返回run中对应的坐标之间的rect
-#pragma mark --- 获取给定Run两坐标之间的所有字形矩阵尺寸数组 ---
--(NSArray *)rectInRun:(DWCTRunWrapper *)run XCrdA:(CGFloat)xCrdA xCrdB:(CGFloat)xCrdB {
-    if (xCrdA > xCrdB) {
-        DWSwapfAB(&xCrdA, &xCrdB);
+#pragma mark --- 获取给定Line两坐标之间的所有字形矩阵尺寸数组 ---
+-(CGRect)rectInLine:(DWCTLineWrapper *)line fromX1:(CGFloat)x1 toX2:(CGFloat)x2 {
+    if (x1 == x2) {
+        return CGRectZero;
     }
-    CGRect rect = run.frame;
-    rect = DWShortenRectToXCrd(rect, xCrdA, YES);
-    rect = DWShortenRectToXCrd(rect, xCrdB, NO);
-    return @[[NSValue valueWithCGRect:rect]];
+    if (x1 > x2) {
+        DWSwapfAB(&x1, &x2);
+    }
+    CGRect rect = line.frame;
+    if (x1 < CGRectGetMinX(rect)) {
+        x1 = CGRectGetMinX(rect);
+    }
+    if (x2 > CGRectGetMaxX(rect)) {
+        x2 = CGRectGetMaxX(rect);
+    }
+    rect = DWShortenRectToXCrd(rect, x1, YES);
+    rect = DWShortenRectToXCrd(rect, x2, NO);
+    return rect;
 }
 
 #pragma mark --- 获取给定Line某点之前或之后的所有字形矩阵尺寸数组 ---
@@ -506,42 +526,15 @@
     if (!backward && loc > _maxLoc + 1) {
         return @[];
     }
-    DWCTRunWrapper * run = [self runAtLocation:loc];
+    DWCTLineWrapper * line = [self lineAtLocation:loc];
     CGFloat xCrd = [self xCrdAtLocation:loc];
-    return [self rectsInLineWithRun:run xCrd:xCrd backward:backward];
+    return [self rectsInLine:line xCrd:xCrd backward:backward];
 }
 
 -(NSArray *)rectInLineAtPoint:(CGPoint)point backword:(BOOL)backward {
-    DWCTRunWrapper * run = [self runAtPoint:point];
+    DWCTLineWrapper * line = [self lineAtPoint:point];
     CGFloat xCrd = [self xCrdAtPoint:point];
-    return [self rectsInLineWithRun:run xCrd:xCrd backward:backward];
-}
-
-#pragma mark --- 返回同一行中两个run之间在两个坐标之间的字形矩阵尺寸数组 ---
--(NSArray *)rectsInLineWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd {
-    if (!startRun || !endRun || startXCrd == MAXFLOAT || endXCrd == MAXFLOAT) {///参数不合法
-        return @[];
-    }
-    if (![startRun.line isEqual:endRun.line]) {///参数不合法
-        return @[];
-    }
-    if (startRun.startIndex > endRun.startIndex) {///保证小者在前
-        DWSwapoAB(startRun, endRun);
-    }
-    if (startXCrd > endXCrd) {///保证小者在前
-        DWSwapfAB(&startXCrd, &endXCrd);
-    }
-    if ([startRun isEqual:endRun]) {///在同一Run中
-        return [self rectInRun:startRun XCrdA:startXCrd xCrdB:endXCrd];
-    }
-    ///不在同一run中
-    NSMutableArray * rects = @[].mutableCopy;
-    CGRect rect = startRun.frame;
-    rect = DWShortenRectToXCrd(rect, startXCrd, YES);
-    do {
-        startRun = [self handleRect:&rect withStartRun:startRun endRun:endRun endXCrd:endXCrd backward:YES container:rects];
-    } while (!CGRectEqualToRect(rect, CGRectZero) && ![startRun isEqual:endRun] && startRun);
-    return rects.copy;
+    return [self rectsInLine:line xCrd:xCrd backward:backward];
 }
 
 #pragma mark --- 获取指定CTLine所有字形矩阵尺寸数组 ---
@@ -549,38 +542,30 @@
     if (!line || !line.runs.count) {
         return @[];
     }
-    if (line.totalLineRects) {
-        return line.totalLineRects;
-    }
-    DWCTRunWrapper * run = line.runs.firstObject;
-    if (!run) {
-        return @[];
-    }
-    line.totalLineRects = [self rectInLineAtPoint:run.frame.origin backword:YES];
-    return line.totalLineRects;
+    NSValue * v = [NSValue valueWithCGRect:line.frame];
+    return @[v];
 }
 
 #pragma mark --- 返回任意两个Run直接介于起始终止坐标之间的所有字形矩阵尺寸数组 ---
--(NSArray *)rectsInLayoutWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd {
-    if (!startRun || !endRun || startXCrd == MAXFLOAT || endXCrd == MAXFLOAT) {///参数不合法
+-(NSArray *)rectsInLayoutWithStartLine:(DWCTLineWrapper *)startLine startXCrd:(CGFloat)startXCrd endLine:(DWCTLineWrapper *)endLine endXCrd:(CGFloat)endXCrd {
+    if (!startLine || !endLine || startXCrd == MAXFLOAT || endXCrd == MAXFLOAT) {///参数不合法
         return @[];
     }
-    if (startRun.startIndex > endRun.startIndex) {///参数不合法
-        DWSwapoAB(startRun, endRun);
+    if (startLine.startIndex > endLine.startIndex) {///参数不合法
+        DWSwapoAB(startLine, endLine);
     }
-    if ([startRun.line isEqual:endRun.line]) {///同一Line中
-        return [self rectsInLineWithStartRun:startRun startXCrd:startXCrd endRun:endRun endXCrd:endXCrd];
+    if ([startLine isEqual:endLine]) {///同一Line中
+        CGRect r = [self rectInLine:startLine fromX1:startXCrd toX2:endXCrd];
+        return DWRectArray(r);
     }
     ///不同行
     NSMutableArray * rects = @[].mutableCopy;
-    DWCTLineWrapper * startLine = startRun.line;
-    DWCTLineWrapper * endLine = endRun.line;
-    [rects addObjectsFromArray:[self rectsInLineWithRun:startRun xCrd:startXCrd backward:YES]];
+    [rects addObjectsFromArray:[self rectsInLine:startLine xCrd:startXCrd backward:YES]];
     while (![startLine.nextLine isEqual:endLine]) {
         startLine = startLine.nextLine;
         [rects addObjectsFromArray:[self rectsInLine:startLine]];
     }
-    [rects addObjectsFromArray:[self rectsInLineWithRun:endRun xCrd:endXCrd backward:NO]];
+    [rects addObjectsFromArray:[self rectsInLine:endLine xCrd:endXCrd backward:NO]];
     return rects;
 }
 
@@ -634,107 +619,30 @@
 /**
  根据指定条件返回对应Line中xCrd及相应模式对应的字形矩阵尺寸数组
  
- @param run 指定位置的CTRun
+ @param line 指定位置的CTLine
  @param xCrd 指定位置的横坐标
  @param backward 是否为向后模式
  @return 符合条件的字形矩阵尺寸数组
  */
--(NSArray *)rectsInLineWithRun:(DWCTRunWrapper *)run xCrd:(CGFloat)xCrd backward:(BOOL)backward {
-    if (!run || xCrd == MAXFLOAT) {
+-(NSArray *)rectsInLine:(DWCTLineWrapper *)line xCrd:(CGFloat)xCrd backward:(BOOL)backward {
+    if (!line || xCrd == MAXFLOAT) {
         return @[];
     }
-    NSMutableArray * rects = @[].mutableCopy;
-    CGRect rect = run.frame;
-    rect = DWShortenRectToXCrd(rect, xCrd, backward);
-    do {
-        run = [self handleRect:&rect withRun:run backward:backward container:rects];
-    } while (!CGRectEqualToRect(rect, CGRectZero) && run);
-    return rects.copy;
-}
-
--(void)addRect:(CGRect)rect toArray:(NSMutableArray *)array {
-    [array addObject:[NSValue valueWithCGRect:rect]];
-}
-
-
-/**
- 将同行中指定run之前或之后的尺寸加入容器
-
- @param rect * 指定run的已计算好的尺寸指针（可能不完整）
- @param run 指定run
- @param backward 指定模式
- @param container 指定容器
- @return 下一个或上一个run
- 
- 注：
- 本方法为循环方法中的中间方法，会将传入的rect延长至下一个矩阵区域后加入指定容器。
- 并返回下一个run
- */
--(DWCTRunWrapper *)handleRect:(CGRect *)rect withRun:(DWCTRunWrapper *)run backward:(BOOL)backward container:(NSMutableArray *)container {
-    return [self handleRect:rect withStartRun:run endRun:nil endXCrd:0 backward:backward container:container];
-}
-
-/**
- 将同行中指定run之前或之后的尺寸加入容器
-
- @param rect * 指定run的已计算好的尺寸指针（可能不完整）
- @param startRun 起始run
- @param endRun 终止run
- @param endXCrd 终止坐标
- @param backward 指定模式
- @param container 指定容器
- @return 下一个或上一个run
- 
- 注：
- 本方法为循环方法中的中间方法，会将传入的rect延长至下一个矩阵区域后加入指定容器。
- 并返回下一个run
- */
--(DWCTRunWrapper *)handleRect:(CGRect *)rect withStartRun:(DWCTRunWrapper *)startRun endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd backward:(BOOL)backward container:(NSMutableArray *)container {
-    
-    CGRect r = *rect;
-    if (!container) {
-        return nil;
-    }
-    if (!startRun) {
-        return nil;
-    }
-    DWCTRunWrapper * nextRun = backward?startRun.nextRun:startRun.previousRun;
-    if (!nextRun) {
-        if (!CGRectEqualToRect(r, CGRectZero)) {
-            [self addRect:r toArray:container];
-        }
-        return nil;
-    }
-    CGRect nextR = nextRun.frame;
-    if ([nextRun isEqual:endRun]) {
-        nextR = DWShortenRectToXCrd(nextR, endXCrd, NO);
-    }
-    if (CGRectEqualToRect(r, CGRectZero)) {
-        *rect = nextR;
-        return nextRun;
-    }
-    if (CGRectEqualToRect(nextR, CGRectZero)) {
-        [self addRect:r toArray:container];
-        return nil;
-    }
-    if (startRun.isImage) {
-        [self addRect:r toArray:container];
-        CGFloat tempX = backward ? CGRectGetMaxX(r) : CGRectGetMinX(r);
-        *rect = DWLengthenRectToXCrd(nextR,tempX);
+    CGFloat x2;
+    if (backward) {
+        x2 = line.runs.lastObject.glyphs.lastObject.endXCrd;
     } else {
-        if (nextRun.isImage) {
-            CGFloat tempX = !backward ? CGRectGetMaxX(nextR) : CGRectGetMinX(nextR);
-            [self addRect:DWLengthenRectToXCrd(r, tempX) toArray:container];
-            *rect = nextR;
-        } else {
-            *rect = CGRectUnion(r, nextR);
-        }
+        x2 = line.runs.firstObject.glyphs.firstObject.startXCrd;
     }
-    if ([nextRun isEqual:endRun]) {
-        [self addRect:*rect toArray:container];
+    CGRect r = [self rectInLine:line fromX1:xCrd toX2:x2];
+    return DWRectArray(r);
+}
+
+static inline NSArray * DWRectArray(CGRect r) {
+    if (CGRectIsEmpty(r)) {
         return nil;
     }
-    return nextRun;
+    return @[[NSValue valueWithCGRect:r]];
 }
 
 /**

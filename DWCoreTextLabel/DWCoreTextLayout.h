@@ -11,7 +11,8 @@
  
  version 1.0.0
  提供基础方法，方便布局计算（当前省略号处会导致CTRunGetStringRange及CTLineGetOffsetForStringIndex两个函数计算错误，尚未找到原因，通过特征信息判断后予以修复，日后找到原因后应寻找更加适合的修正方式）
- 修复中英文计算高度问题(图片padding问题待改进)
+ 修复中英文计算高度问题
+ 图片padding以修复，选中效果更新方案，现已完成
  */
 
 #import <Foundation/Foundation.h>
@@ -88,6 +89,9 @@
 
 ///是否是图片
 @property (nonatomic ,assign ,readonly) BOOL isImage;
+
+///图片实际绘制尺寸
+@property (nonatomic ,assign ,readonly) CGRect imageRect;
 
 ///是否具有事件
 @property (nonatomic ,assign ,readonly) BOOL hasAction;
@@ -218,18 +222,15 @@
 -(NSArray *)selectedRectsInRange:(NSRange)range;
 -(NSArray *)selectedAllRects;
 
-
 /**
- 获取给定Run两坐标之间的所有字形矩阵尺寸数组
+ 获取给定Line两坐标之间的所有字形矩阵尺寸
 
- @param run 给定run
- @param xCrdA 横坐标A
- @param xCrdB 横坐标B
- @return 符合条件的字形矩阵尺寸数组
- 
- 注：两坐标无大小顺序要求，若B坐标小于A，API会自动交换
+ @param line 给定Line
+ @param x1 获取的第一个坐标
+ @param x2 获取的第二个坐标
+ @return 返回两坐标之间的尺寸
  */
--(NSArray *)rectInRun:(DWCTRunWrapper *)run XCrdA:(CGFloat)xCrdA xCrdB:(CGFloat)xCrdB;
+-(CGRect)rectInLine:(DWCTLineWrapper *)line fromX1:(CGFloat)x1 toX2:(CGFloat)x2;
 
 
 /**
@@ -247,16 +248,13 @@
 /**
  获取同一行中两个run之间在两个坐标之间的字形矩阵尺寸数组
 
- @param startRun 开始的run
+ @param startLine 开始的line
  @param startXCrd 开始的横坐标
- @param endRun 结束的run
+ @param endLine 结束的line
  @param endXCrd 结束的横坐标
  @return 符合条件的字形矩阵尺寸数组
- 
- 注：
- run及xCrd均无大小顺序要求，如果传入相反顺序，API会自行交换（此API仅可应用于计算同一Line对象中两个Run间的字形矩阵计算）
  */
--(NSArray *)rectsInLineWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd;
+-(NSArray *)rectsInLayoutWithStartLine:(DWCTLineWrapper *)startLine startXCrd:(CGFloat)startXCrd endLine:(DWCTLineWrapper *)endLine endXCrd:(CGFloat)endXCrd;
 
 
 /**
@@ -266,23 +264,6 @@
  @return 目标CTLine的所有字形矩阵尺寸数组
  */
 -(NSArray *)rectsInLine:(DWCTLineWrapper *)line;
-
-
-/**
- 返回任意两个Run直接介于起始终止坐标之间的所有字形矩阵尺寸数组
-
- @param startRun 开始的run
- @param startXCrd 需要返回尺寸的字形起始位置横坐标
- @param endRun 结束的run
- @param endXCrd 需要返回尺寸的字形终止位置横坐标
- @return 符合条件的字形矩阵尺寸数组
- 
- 注：
- 理论上run及坐标均应保证正确的先后对应顺序。
- 若run传入的startRun的角标大于endRun，API会自动交换。
- 但startXCrd中，API无法根据横坐标数值判断先后顺序，故应保证横坐标按对应顺序传入。当开发者无法确定横坐标起始顺序时，应根据实际情况，酌情考虑使用-selectedRectsBetweenPointA:andPointB: API来计算等效范围
- */
--(NSArray *)rectsInLayoutWithStartRun:(DWCTRunWrapper *)startRun startXCrd:(CGFloat)startXCrd endRun:(DWCTRunWrapper *)endRun endXCrd:(CGFloat)endXCrd;
 
 
 /**
