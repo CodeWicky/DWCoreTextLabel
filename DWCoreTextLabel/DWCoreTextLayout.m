@@ -52,6 +52,12 @@
 
 @end
 
+@interface DWCTLineWrapper ()
+
+-(void)configFrame:(CGRect)frame;
+
+@end
+
 @implementation DWCTRunWrapper
 
 +(instancetype)createWrapperForCTRun:(CTRunRef)ctRun {
@@ -168,6 +174,7 @@
                 deleteBounds = CGRectInset(deleteBounds, padding, 0);
             }
             _imageRect = deleteBounds;
+            [_line configFrame:CGRectUnion(_line.frame, deleteBounds)];
             if (_glyphs.count) {
                 DWGlyphWrapper * g = self.glyphs.firstObject;
                 [g configStartXCrd:CGRectGetMinX(deleteBounds) endXCrd:CGRectGetMaxX(deleteBounds)];
@@ -237,7 +244,11 @@
     CGRect boundsLine = CGRectMake(0, - lineDescent, lineWidth, lineAscent + lineDescent);
     boundsLine = CGRectOffset(boundsLine, origin.x, origin.y);
     _lineRect = getRectWithCTFramePathOffset(boundsLine, ctFrame);
-    _frame = convertRect(_lineRect, height);
+    [self configFrame:convertRect(_lineRect, height)];
+}
+
+-(void)configFrame:(CGRect)frame {
+    _frame = frame;
 }
 
 -(void)configCTRunsWithCTFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height considerGlyphs:(BOOL)considerGlyphs {
@@ -467,6 +478,10 @@
         return @[];
     }
     locationB --;//函数出入的是不包含的locationB，所以自减至包含位置
+    
+    DWGlyphWrapper * g = [self glyphAtLocation:locationA];
+    
+    
     CGFloat startXCrd = [self xCrdAtLocation:locationA];
     CGFloat endXCrd = [self glyphAtLocation:locationB].endXCrd;
     DWCTLineWrapper * startLine = [self lineAtLocation:locationA];

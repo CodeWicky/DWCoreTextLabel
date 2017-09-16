@@ -33,7 +33,7 @@
     label.textInsets = UIEdgeInsetsMake(50, 10, 50, 10);
     label.textColor = [UIColor blueColor];
     [self.view addSubview:label];
-////////    label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(0, 0, 50, 50)]].mutableCopy;
+//    label.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(0, 0, 50, 50)]].mutableCopy;
     [label dw_InsertImage:[UIImage imageNamed:@"2.jpg"] withImageID:@"URL" size:CGSizeMake(30, 30) padding:-5 descent:0 atLocation:11 target:self selector:@selector(clickPic)];
 //////    [label dw_DrawImage:[UIImage imageNamed:@"oldDriver"] withImageID:@"URL" path:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(10,5, 120, 120)] margin:5 drawMode:(DWTextImageDrawModeSurround) target:self selector:@selector(clickHeader)];
 //////    [label dw_AddTarget:self selector:@selector(clickLink) toRange:NSMakeRange(126, 57)];
@@ -139,10 +139,10 @@
 //    [[[UIAlertView alloc] initWithTitle:nil message:@"你点我头像嘎哈！" delegate:nil cancelButtonTitle:@"我错了" otherButtonTitles:nil] show];
 //}
 //
-//-(void)clickPic
-//{
-//    [[[UIAlertView alloc] initWithTitle:nil message:@"你点击了图片！" delegate:nil cancelButtonTitle:@"我知道了" otherButtonTitles:nil] show];
-//}
+-(void)clickPic
+{
+    [[[UIAlertView alloc] initWithTitle:nil message:@"你点击了图片！" delegate:nil cancelButtonTitle:@"我知道了" otherButtonTitles:nil] show];
+}
 //
 //-(void)clickLink
 //{
