@@ -970,6 +970,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 
 -(void)selectAll {
     [self selectAtRange:_layout.maxRange];
+    [self showMenu];
 }
 -(void)cancelSelected {
     [_selectionView updateSelectedRects:nil startGrabberPosition:DWPositionZero endGrabberPosition:DWPositionZero];

@@ -479,9 +479,6 @@
     }
     locationB --;//函数出入的是不包含的locationB，所以自减至包含位置
     
-    DWGlyphWrapper * g = [self glyphAtLocation:locationA];
-    
-    
     CGFloat startXCrd = [self xCrdAtLocation:locationA];
     CGFloat endXCrd = [self glyphAtLocation:locationB].endXCrd;
     DWCTLineWrapper * startLine = [self lineAtLocation:locationA];
@@ -613,8 +610,8 @@
         NSUInteger count = CFArrayGetCount(arrLines);
         CGPoint points[count];
         CTFrameGetLineOrigins(ctFrame, CFRangeMake(0, 0), points);
-        CFRange range = CTFrameGetStringRange(ctFrame);
-        _maxLoc = range.location + range.length - 1;
+//        CFRange range = CTFrameGetStringRange(ctFrame);
+//        _maxLoc = range.location + range.length - 1;
         DWCTLineWrapper * previousLine = nil;
         NSMutableArray * lineA = @[].mutableCopy;
         for (int i = 0; i < count; i++) {
@@ -627,8 +624,33 @@
             [lineA addObject:lineWrap];
         }
         _lines = lineA.copy;
+        _maxLoc = [self lastGlyphWrapper].index;
     }
     return self;
+}
+
+-(DWGlyphWrapper *)lastGlyphWrapper {
+    if (!_lines.count) {
+        return nil;
+    }
+    DWGlyphWrapper * glyph = nil;
+    DWCTLineWrapper * line = _lines.lastObject;
+    do {
+        if (!line.runs.count) {
+            line = line.previousLine;
+            continue;
+        }
+        DWCTRunWrapper * run = line.runs.lastObject;
+        do {
+            if (!run.glyphs.count) {
+                run = run.previousRun;
+                continue;
+            }
+            glyph = run.glyphs.lastObject;
+        } while (run && !glyph);
+        line = line.previousLine;
+    } while (line && !glyph);
+    return glyph;
 }
 
 /**

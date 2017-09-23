@@ -156,9 +156,6 @@
 ///具有响应事件的图片的配置数组（Layout仅处理插入图片的图片配置数组，对于Path绘制的不处理）
 @property (nonatomic ,strong ,readonly) NSArray * activeImageConfigs;
 
-/////当前选中范围
-//@property (nonatomic ,assign) NSRange selectedRange;
-
 @property (nonatomic ,assign ,readonly) NSRange maxRange;
 
 
