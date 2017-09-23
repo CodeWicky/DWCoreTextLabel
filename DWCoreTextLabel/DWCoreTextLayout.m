@@ -235,6 +235,10 @@
     return self;
 }
 
+-(void)configEndIndex:(NSUInteger)endIndex {
+    _endIndex = endIndex;
+}
+
 -(void)configWithOrigin:(CGPoint)origin row:(NSUInteger)row ctFrame:(CTFrameRef)ctFrame convertHeight:(CGFloat)height {
     _lineOrigin = origin;
     _row = row;
@@ -610,8 +614,6 @@
         NSUInteger count = CFArrayGetCount(arrLines);
         CGPoint points[count];
         CTFrameGetLineOrigins(ctFrame, CFRangeMake(0, 0), points);
-//        CFRange range = CTFrameGetStringRange(ctFrame);
-//        _maxLoc = range.location + range.length - 1;
         DWCTLineWrapper * previousLine = nil;
         NSMutableArray * lineA = @[].mutableCopy;
         for (int i = 0; i < count; i++) {
@@ -624,7 +626,10 @@
             [lineA addObject:lineWrap];
         }
         _lines = lineA.copy;
-        _maxLoc = [self lastGlyphWrapper].index;
+        DWGlyphWrapper * lastGlyph = [self lastGlyphWrapper];
+        NSUInteger lastIndex = lastGlyph.index;
+        [lastGlyph.run.line configEndIndex:lastIndex + 1];
+        _maxLoc = lastIndex;
     }
     return self;
 }
