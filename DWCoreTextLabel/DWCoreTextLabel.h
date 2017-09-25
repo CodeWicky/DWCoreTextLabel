@@ -142,7 +142,9 @@
  Layout计算类计算选中尺寸API添加完成
  选择视图添加完成
  选择视图省略号相关修复、Calculator中DWFixRectToXCrd函数bug修复
- 选择动作目录添加完成（功能回归测试待进行、选择功能暂时去除，已知bug当排除区域与边界距离小于一个字但大于0时非矩形排除区域会在边界绘制一个字宽。这将影响drawImage的surroundMode，此处建议解决方案为配合exclusionPaths中包含同区域矩形path进行解决）
+ 选择动作目录添加完成
+ 去除选择效果，需考虑选择效果导致touchBegan延迟触发的解决方案
+ （已知bug当排除区域与边界距离小于一个字但大于0时非矩形排除区域会在边界绘制一个字宽。这将影响drawImage的surroundMode，此处建议解决方案为配合exclusionPaths中包含同区域矩形path进行解决）
  
  
  */

@@ -40,7 +40,7 @@
     [label dw_AddTarget:self selector:@selector(clickLink) toRange:NSMakeRange(126, 57)];
     [label dw_AddTarget:self selector:@selector(clickBlog) toRange:NSMakeRange(191, 28)];
     label.delegate = self;
-////////    label.autoCheckLink = YES;
+    label.autoCheckLink = YES;
     NSDictionary * dic = @{NSForegroundColorAttributeName:[UIColor redColor]};
     label.activeTextAttributes = dic;
 //    label.textVerticalAlignment = DWTextVerticalAlignmentBottom;
