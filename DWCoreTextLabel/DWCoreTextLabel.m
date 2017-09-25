@@ -191,6 +191,9 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 ///在字符串指定位置插入图片
 -(void)dw_InsertImage:(UIImage *)image withImageID:(NSString *)imageID size:(CGSize)size padding:(CGFloat)padding descent:(CGFloat)descent atLocation:(NSUInteger)location target:(id)target selector:(SEL)selector {
+    if (location > self.mAStr.length) {
+        return;
+    }
     NSMutableDictionary * dic = [self configImage:image withImageID:imageID size:size padding:padding descent:descent atLocation:location target:target selector:selector];
     if (!dic) {
         return;
@@ -446,8 +449,11 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 -(void)handleLastLineTruncateWithLastLineRange:(CFRange)range attributeString:(NSMutableAttributedString *)mAStr{
     NSDictionary * lastAttribute = [mAStr attributesAtIndex:mAStr.length - 1 effectiveRange:NULL];
     NSMutableParagraphStyle * newPara = [lastAttribute[NSParagraphStyleAttributeName] mutableCopy];
+    if (!newPara) {
+        newPara = [[NSMutableParagraphStyle alloc] init];
+    }
     newPara.lineBreakMode = NSLineBreakByTruncatingTail;
-    [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSMakeRange(range.location, range.length)];
+    [mAStr addAttribute:NSParagraphStyleAttributeName value:newPara range:NSRangeFromCFRange(range)];
 }
 
 ///添加活跃文本属性方法
