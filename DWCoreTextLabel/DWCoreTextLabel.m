@@ -313,7 +313,6 @@ static DWTextImageDrawMode DWTextImageDrawModeInsert = 2;
 
 ///将所有插入图片插入字符串
 -(void)handleStr:(NSMutableAttributedString *)str withInsertImageArr:(NSMutableArray *)arr arrLocationImgHasAdd:(NSMutableArray *)arrLocationImgHasAdd {
-    [arrLocationImgHasAdd removeAllObjects];
     [arr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic, NSUInteger idx, BOOL * _Nonnull stop) {
         handleInsertPic(self,dic,str,arrLocationImgHasAdd);
     }];
@@ -452,12 +451,13 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 }
 
 ///添加活跃文本属性方法
--(void)handleActiveTextWithStr:(NSMutableAttributedString *)str rangeSet:(NSMutableSet *)rangeSet withImage:(BOOL)withImage {
+-(void)handleActiveTextWithStr:(NSMutableAttributedString *)str visibleRange:(NSRange)visibleRange rangeSet:(NSMutableSet *)rangeSet {
     [self.textRangeArr enumerateObjectsUsingBlock:^(NSMutableDictionary * dic  , NSUInteger idx, BOOL * _Nonnull stop) {
         NSRange range = [dic[@"range"] rangeValue];
-        if (withImage) {
-            range = getRangeOffset(range,self.arrLocationImgHasAdd);
+        if (NSEqualRanges(NSIntersectionRange(range, visibleRange), NSRangeZero)) {
+            return ;
         }
+        range = getRangeOffset(range,self.arrLocationImgHasAdd);
         [rangeSet addObject:[NSValue valueWithRange:range]];
         [str addAttribute:@"clickAttribute" value:dic range:range];
         if (self.textClicked && self.highlightDic) {
@@ -594,7 +594,7 @@ static inline void handleInsertPic(DWCoreTextLabel * label,NSMutableDictionary *
 
 ///处理文本高亮状态
 -(void)handleStringHighlightAttributesWithRangeSet:(NSMutableSet *)rangeSet visibleRange:(CFRange)visibleRange {
-    NSRange vRange = NSMakeRange(visibleRange.location, visibleRange.length);
+    NSRange vRange = NSRangeFromCFRange(visibleRange);
     [self handleAutoCheckWithLinkType:DWLinkTypeCustom str:self.mAStr linkRange:vRange rangeSet:rangeSet linkDic:self.customLinkDic attributeName:@"customLink"];
     ///处理自动检测链接
     if (self.autoCheckLink) {
@@ -642,25 +642,14 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         
         
         CFRange visibleRange = getRangeToDrawForVisibleString(frame4Cal);
-        
+        CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
+        visibleRange = getVisibleRangeFromLastRange(visibleRange, lastRange);
         DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///已添加事件、链接的集合
-        NSMutableSet * rangeSet = [NSMutableSet set];
-        ///添加活跃文本属性方法
-        if (needDrawString) {
-            [self handleActiveTextWithStr:self.mAStr rangeSet:rangeSet withImage:!self.reCalculate];
-        }
-        
-        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
-        ///处理文本高亮状态并获取可见绘制文本范围
-        if (needDrawString) {
-            [self handleStringHighlightAttributesWithRangeSet:rangeSet visibleRange:visibleRange];
-        }
-        
-        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         ///处理插入图片
         if (needDrawString) {
             NSMutableArray * arrInsert = self.insertImageArr.copy;
+            [self.arrLocationImgHasAdd removeAllObjects];
             if (arrInsert.count) {
                 ///富文本插入图片占位符
                 [self handleStr:self.mAStr withInsertImageArr:arrInsert arrLocationImgHasAdd:self.arrLocationImgHasAdd];
@@ -670,13 +659,29 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
                 frameSetter4Cal = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.mAStr);
                 frame4Cal = CTFramesetterCreateFrame(frameSetter4Cal, CFRangeMake(0, 0), [UIBezierPath bezierPathWithRect:frame].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
                 visibleRange = getRangeToDrawForVisibleString(frame4Cal);
+                lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
+                visibleRange = getVisibleRangeFromLastRange(visibleRange, lastRange);
             }
         }
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         
+        NSMutableSet * rangeSet = [NSMutableSet set];
+        ///添加活跃文本属性方法
+        if (needDrawString) {
+            [self handleActiveTextWithStr:self.mAStr visibleRange:NSRangeFromCFRange(visibleRange) rangeSet:rangeSet];
+        }
+        
+        DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
+        ///处理文本高亮状态并获取可见绘制文本范围
+        if (needDrawString) {
+            [self handleStringHighlightAttributesWithRangeSet:rangeSet visibleRange:visibleRange];
+        }
+        
+        lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
+        visibleRange = getVisibleRangeFromLastRange(visibleRange, lastRange);
         ///处理句尾省略号
         DRAWCANCELEDWITHREALSE(frameSetter4Cal, frame4Cal)
         if (needDrawString) {
-            CFRange lastRange = getLastLineRange(frame4Cal, self.numberOfLines,visibleRange);
             [self handleLastLineTruncateWithLastLineRange:lastRange attributeString:self.mAStr];
         }
         
@@ -1145,10 +1150,10 @@ static CGFloat widthCallBacks(void * ref) {
         layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
         };
-        UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
-        doubleClick.numberOfTapsRequired = 2;
-        doubleClick.delaysTouchesBegan = YES;
-        [self addGestureRecognizer:doubleClick];
+//        UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
+//        doubleClick.numberOfTapsRequired = 2;
+//        doubleClick.delaysTouchesBegan = YES;
+//        [self addGestureRecognizer:doubleClick];
     }
     return self;
 }

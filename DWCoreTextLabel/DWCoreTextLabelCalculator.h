@@ -65,6 +65,15 @@ NSInteger getInsertOffset(NSMutableArray * locations,NSInteger newLoc);
  */
 CGSize getSuggestSize(CTFramesetterRef frameSetter,CFRange rangeToDraw,CGFloat limitWidth,NSUInteger numberOfLines);
 
+
+/**
+ 转换range
+
+ @param range CFRange
+ @return NSRange
+ */
+NSRange NSRangeFromCFRange(CFRange range);
+
 /**
  获取计算绘制可见文本范围
 
@@ -82,6 +91,15 @@ CFRange getRangeToDrawForVisibleString(CTFrameRef frame);
  @return 最后一行范围
  */
 CFRange getLastLineRange(CTFrameRef frame,NSUInteger numberOfLines,CFRange visibleRange);
+
+/**
+ 通过最后一行区域获取修正后的可见区域
+
+ @param visibleRange 当前可见区域
+ @param lastRange 当前最后一行区域
+ @return 修正后的可见区域
+ */
+CFRange getVisibleRangeFromLastRange(CFRange visibleRange,CFRange lastRange);
 
 /**
  根据margin获取图片实际响应区域

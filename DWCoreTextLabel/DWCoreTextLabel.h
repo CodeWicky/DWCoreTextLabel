@@ -193,7 +193,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 ///代理
 @property (nonatomic ,weak) id<DWCoreTextLabelDelegate> delegate;
 
-///普通文本
+///普通文本(注：请先设置text再进行插入图片、链接等操作，设置text会取消之前的操作)
 @property (nonatomic ,strong) NSString * text;
 
 ///文本区域内距
@@ -211,7 +211,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 ///字体
 @property (nonatomic ,strong) UIFont * font;
 
-///富文本
+///富文本(注：请先设置attributedText再进行插入图片、链接等操作，设置text会取消之前的操作)
 @property (nonatomic ,strong) NSAttributedString * attributedText;
 
 ///水平对齐方式

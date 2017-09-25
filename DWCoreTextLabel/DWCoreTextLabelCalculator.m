@@ -64,6 +64,10 @@ CGSize getSuggestSize(CTFramesetterRef frameSetter,CFRange rangeToDraw,CGFloat l
     return CGSizeMake(ceil(MIN(suggestSize.width, limitWidth)),ceil(suggestSize.height));
 }
 
+NSRange NSRangeFromCFRange(CFRange range) {
+    return NSMakeRange(range.location, range.length);
+}
+
 ///获取计算绘制可见文本范围
 CFRange getRangeToDrawForVisibleString(CTFrameRef frame) {
     return CTFrameGetVisibleStringRange(frame);
@@ -97,6 +101,15 @@ CFRange getLastLineRange(CTFrameRef frame ,NSUInteger numberOfLines,CFRange visi
             }
         }
     }
+    return range;
+}
+
+CFRange getVisibleRangeFromLastRange(CFRange visibleRange,CFRange lastRange) {
+    CFRange range = CFRangeMake(0, 0);
+    range.location = MIN(visibleRange.location, lastRange.location);
+    NSUInteger maxLocVisible = visibleRange.location + visibleRange.length;
+    NSUInteger maxLocLast = lastRange.location + lastRange.length;
+    range.length = maxLocVisible < maxLocLast ? maxLocVisible - range.location : maxLocLast - range.location;
     return range;
 }
 
