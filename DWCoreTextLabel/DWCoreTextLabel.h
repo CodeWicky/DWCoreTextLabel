@@ -143,9 +143,11 @@
  选择视图添加完成
  选择视图省略号相关修复、Calculator中DWFixRectToXCrd函数bug修复
  选择动作目录添加完成
- 去除选择效果，需考虑选择效果导致touchBegan延迟触发的解决方案
- （已知bug当排除区域与边界距离小于一个字但大于0时非矩形排除区域会在边界绘制一个字宽。这将影响drawImage的surroundMode，此处建议解决方案为配合exclusionPaths中包含同区域矩形path进行解决）
- 
+ （已知bug：
+ 当排除区域与边界距离小于一个字但大于0时非矩形排除区域会在边界绘制一个字宽。
+ 两种排除区域方式均无法避免此bug。
+ 暂怀疑为coreText系统bug。
+ 这将影响drawImage的surroundMode，此处建议解决方案为配合exclusionPaths中包含同区域矩形path进行解决）
  
  */
 
@@ -346,7 +348,7 @@ typedef NS_ENUM(NSUInteger, DWLinkType) {///自动链接样式
 /**
  允许选中
  */
-@property (nonatomic ,assign) BOOL enabelSelect;
+@property (nonatomic ,assign) BOOL allowSelect;
 
 #pragma mark --- 接口方法 ---
 /**

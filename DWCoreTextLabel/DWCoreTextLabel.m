@@ -888,8 +888,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 
 ///处理点击事件
 -(void)handleClickWithDic:(NSDictionary *)dic {
-    self.hasActionToDo = NO;
-    self.highlightDic = nil;
+    [self cancelTouch];
     id target = dic[@"target"];
     SEL selector = NSSelectorFromString(dic[@"SEL"]);
     NSMethodSignature  *signature = [[target class] instanceMethodSignatureForSelector:selector];
@@ -900,6 +899,11 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         [invocation setArgument:&dic atIndex:2];
     }
     [invocation invoke];
+}
+
+-(void)cancelTouch {
+    self.hasActionToDo = NO;
+    self.highlightDic = nil;
 }
 
 ///处理点击高亮
@@ -998,7 +1002,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 }
 
 #pragma mark --- 获取点击行为 ---
--(void)doubleClickAction:(UITapGestureRecognizer *)sender {
+-(void)doubleClickAction:(UILongPressGestureRecognizer *)sender {
     CGPoint point = [sender locationInView:self];
     DWGlyphWrapper * glyph = [_layout glyphAtPoint:point];
     if (!glyph) {
@@ -1009,6 +1013,8 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
     if (NSEqualRanges(self.seletedRange, NSRangeNull)) {
         return;
     }
+    [self cancelTouch];
+    [self setNeedsDisplay];
     _selectingMode = YES;
     _selectGes.enabled = NO;
 }
@@ -1147,7 +1153,7 @@ static CGFloat widthCallBacks(void * ref) {
         _reCalculate = YES;
         _reCheck = YES;
         _excludeSubviews = YES;
-        _enabelSelect = YES;
+        _allowSelect = YES;
         _seletedRange = NSRangeNull;
         self.backgroundColor = [UIColor clearColor];
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
@@ -1156,10 +1162,10 @@ static CGFloat widthCallBacks(void * ref) {
         layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
         };
-//        UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
-//        doubleClick.numberOfTapsRequired = 2;
-//        doubleClick.delaysTouchesBegan = YES;
-//        [self addGestureRecognizer:doubleClick];
+        UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
+        doubleClick.numberOfTapsRequired = 2;
+        _selectGes = doubleClick;
+        [self addGestureRecognizer:doubleClick];
     }
     return self;
 }
@@ -1404,11 +1410,28 @@ static CGFloat widthCallBacks(void * ref) {
     }
 }
 
--(void)setEnabelSelect:(BOOL)enabelSelect {
-    if (_enabelSelect != enabelSelect) {
-        _enabelSelect = enabelSelect;
-        self.selectGes.enabled = enabelSelect;
+-(void)setAllowSelect:(BOOL)allowSelect {
+    if (_allowSelect != allowSelect) {
+        _allowSelect = allowSelect;
+        _selectGes.enabled = allowSelect;
     }
+}
+
+-(DWCoreTextSelectionView *)selectionView {
+    if (!_selectionView) {
+        _selectionView = [[DWCoreTextSelectionView alloc] initWithFrame:self.bounds];
+        _selectionView.selectAction = DWSelectActionCopy | DWSelectActionSelectAll;
+        __weak typeof(self)weakSelf = self;
+        _selectionView.selectActionCallBack = ^(DWSelectAction action) {
+            if (action & DWSelectActionCopy) {
+                [UIPasteboard generalPasteboard].string = [weakSelf.mAStr.string substringWithRange:weakSelf.seletedRange];
+            } else if (action & DWSelectActionSelectAll) {
+                [weakSelf selectAll];
+            }
+        };
+        [self addSubview:_selectionView];
+    }
+    return _selectionView;
 }
 #pragma mark ---链接属性setter、getter---
 -(void)setActiveTextAttributes:(NSDictionary *)activeTextAttributes {
@@ -1601,23 +1624,6 @@ static CGFloat widthCallBacks(void * ref) {
         _customLinkDic = [NSMutableDictionary dictionary];
     }
     return _customLinkDic;
-}
-
--(DWCoreTextSelectionView *)selectionView {
-    if (!_selectionView) {
-        _selectionView = [[DWCoreTextSelectionView alloc] initWithFrame:self.bounds];
-        _selectionView.selectAction = DWSelectActionCopy | DWSelectActionSelectAll;
-        __weak typeof(self)weakSelf = self;
-        _selectionView.selectActionCallBack = ^(DWSelectAction action) {
-            if (action & DWSelectActionCopy) {
-                [UIPasteboard generalPasteboard].string = [weakSelf.mAStr.string substringWithRange:weakSelf.seletedRange];
-            } else if (action & DWSelectActionSelectAll) {
-                [weakSelf selectAll];
-            }
-        };
-        [self addSubview:_selectionView];
-    }
-    return _selectionView;
 }
 
 @end
