@@ -1243,8 +1243,9 @@ static CGFloat widthCallBacks(void * ref) {
     __block CGRect desFrame = CGRectZero;
     
     DWCoreTextLayout * layout = [DWCoreTextLayout layoutWithCTFrame:visibleFrame convertHeight:size.height considerGlyphs:NO];
-    [layout enumerateCTRunUsingBlock:^(DWCTRunWrapper *run, BOOL *stop) {
-        CGRect temp = run.frame;
+    
+    [layout.lines enumerateObjectsUsingBlock:^(DWCTLineWrapper * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        CGRect temp = obj.frame;
         desFrame = CGRectUnion(temp, desFrame);
     }];
     
