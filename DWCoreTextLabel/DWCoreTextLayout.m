@@ -44,7 +44,7 @@
 
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tindex:\t%lu",self.index]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tindex:\t%lu",(unsigned long)self.index]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartXCrd:\t%.2f",self.startXCrd]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendXCrd:\t%.2f\n}",self.endXCrd]];
     return string;
@@ -200,8 +200,8 @@
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tpreviousRun:\t%@",self.previousRun]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tnextRun:\t%@\n}",self.nextRun]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartIndex:\t%lu",self.startIndex]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendIndex:\t%lu",self.endIndex]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tstartIndex:\t%lu",(unsigned long)self.startIndex]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tendIndex:\t%lu",(unsigned long)self.endIndex]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tglyphs:\t%@\n}",self.glyphs]];
     return string;
 }
@@ -287,7 +287,7 @@
 -(NSString *)debugDescription {
     NSString * string = [NSString stringWithFormat:@"%@ {",[super description]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tframe:\t%@",NSStringFromCGRect(self.frame)]];
-    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\trow:\t%lu",self.row]];
+    string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\trow:\t%lu",(unsigned long)self.row]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\truns:\t%@",self.runs]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tpreviousLine:\t%@",self.previousLine]];
     string = [string stringByAppendingString:[NSString stringWithFormat:@"\n\tnextLine:\t%@\n}",self.nextLine]];

@@ -136,22 +136,22 @@
 //
 -(void)clickHeader
 {
-    [[[UIAlertView alloc] initWithTitle:nil message:@"你点我头像嘎哈！" delegate:nil cancelButtonTitle:@"我错了" otherButtonTitles:nil] show];
+//    [[[UIAlertView alloc] initWithTitle:nil message:@"你点我头像嘎哈！" delegate:nil cancelButtonTitle:@"我错了" otherButtonTitles:nil] show];
 }
 
 -(void)clickPic
 {
-    [[[UIAlertView alloc] initWithTitle:nil message:@"你点击了图片！" delegate:nil cancelButtonTitle:@"我知道了" otherButtonTitles:nil] show];
+//    [[[UIAlertView alloc] initWithTitle:nil message:@"你点击了图片！" delegate:nil cancelButtonTitle:@"我知道了" otherButtonTitles:nil] show];
 }
 
 -(void)clickLink
 {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://www.jianshu.com/users/a56ec10f6603/latest_articles"]];
+//    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://www.jianshu.com/users/a56ec10f6603/latest_articles"]];
 }
 
 -(void)clickBlog
 {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/CodeWicky"]];
+//    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://github.com/CodeWicky"]];
 }
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
