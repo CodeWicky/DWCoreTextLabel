@@ -143,11 +143,15 @@
  选择视图添加完成
  选择视图省略号相关修复、Calculator中DWFixRectToXCrd函数bug修复
  选择动作目录添加完成
+ 修复insertImage无效问题
+ 修复存在排除区域时，且numberOfLines所需实际范围小于视图范围是多绘制一行的第一个字的bug
  （已知bug：
  当排除区域与边界距离小于一个字但大于0时非矩形排除区域会在边界绘制一个字宽。
  两种排除区域方式均无法避免此bug。
  暂怀疑为coreText系统bug。
  这将影响drawImage的surroundMode，此处建议解决方案为配合exclusionPaths中包含同区域矩形path进行解决）
+ 
+ 少数情况末尾省略号失效，尚未找到原因
  
  */
 

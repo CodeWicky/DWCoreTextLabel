@@ -9,6 +9,7 @@
 #import <UIKit/UIKit.h>
 #import <CoreText/CoreText.h>
 @class DWCoreTextLabel;
+@class DWCoreTextLayout;
 
 ///安全释放
 #define CFSAFERELEASE(a)\
@@ -109,6 +110,20 @@ CFRange getVisibleRangeFromLastRange(CFRange visibleRange,CFRange lastRange);
  @return 图片实际响应区域
  */
 UIBezierPath * getImageAcitvePath(UIBezierPath * path,CGFloat margin);
+
+
+/**
+ 根据CTFrame及转换视图高度获取将要绘制的frame
+
+ @param ctFrame 计算用的绘制Frame
+ @param height 视图高度
+ @param startFromZero 是否从0开始计算
+ @return 将要绘制的尺寸
+ 
+ 注：
+ sizeThatFits中从零开始计算，正常绘制时不从零计算
+ */
+CGRect getDrawFrame(CTFrameRef ctFrame,CGFloat height,BOOL startFromZero);
 
 /**
  获取CTRun对应的实际尺寸

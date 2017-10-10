@@ -8,6 +8,7 @@
 
 #import "DWCoreTextLabelCalculator.h"
 #import "DWCoreTextLabel.h"
+#import "DWCoreTextLayout.h"
 
 #pragma mark --- 获取相关数据 ---
 ///获取当前需要绘制的文本
@@ -126,6 +127,24 @@ UIBezierPath * getImageAcitvePath(UIBezierPath * path,CGFloat margin) {
     [newPath applyTransform:CGAffineTransformMakeScale(widthScale, heightScale)];
     [newPath applyTransform:CGAffineTransformMakeTranslation(offsetX, offsetY)];
     return newPath;
+}
+
+///获取绘制所需尺寸
+CGRect getDrawFrame(CTFrameRef ctFrame,CGFloat height,BOOL startFromZero) {
+    DWCoreTextLayout * layout = [DWCoreTextLayout layoutWithCTFrame:ctFrame convertHeight:height considerGlyphs:NO];
+    __block CGRect desFrame = CGRectNull;
+    if (startFromZero) {
+        desFrame = CGRectZero;
+    }
+    [layout.lines enumerateObjectsUsingBlock:^(DWCTLineWrapper * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        CGRect temp = obj.frame;
+        if (CGRectEqualToRect(desFrame, CGRectNull)) {
+            desFrame = temp;
+            return ;
+        }
+        desFrame = CGRectUnion(temp, desFrame);
+    }];
+    return desFrame;
 }
 
 ///获取CTRun的frame
