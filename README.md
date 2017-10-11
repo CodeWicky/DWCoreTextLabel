@@ -31,13 +31,13 @@ Firstly,drag it into your project or use cocoapods.
 
 Then,to make you use it easily,I keep all the property the same as UILabel.So,use it as UILabel and other extense function you may understand its meaning by name.
 > And here are some API about image:
-
+> 
 > To insert image by using the series API of dw_InsertImage...
-
+> 
 > To draw image by using the series API of dw_DrawImage...
-
+> 
 > To add click-action by using dw_AddTarget...
-
+> 
 > To delete image by using dw_RemoveImageByID...
 
 ## 如何使用
@@ -48,14 +48,14 @@ Then,to make you use it easily,I keep all the property the same as UILabel.So,us
 为了让开发者能够更快上手，我保留了与UILabel相同的属性名。所以你可以像使用UILabel一样使用它，并且一些拓展属性也是见名知意的，看他的属性名你大概就该知道他的用途。
 
 > 还有一些图片相关的API：
-
-> 使用**dw_InsertImage...**系列API向文字中插入图片。
-
-> 使用**dw_DrawImage...**系列API在文字间绘制图片。
-
-> 使用**dw_AddTarget...**API为文字或图片添加点击事件。
-
-> 使用**dw_RemoveImageByID...**API为删除已经插入或绘制的图片。
+> 
+> 使用dw_InsertImage...系列API向文字中插入图片。
+> 
+> 使用dw_DrawImage...系列API在文字间绘制图片。
+> 
+> 使用dw_AddTarget...API为文字或图片添加点击事件。
+> 
+> 使用dw_RemoveImageByID...API为删除已经插入或绘制的图片。
  
 ## Contact With Me
 
