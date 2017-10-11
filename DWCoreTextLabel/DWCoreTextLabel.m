@@ -766,12 +766,11 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         ///若无排除区域处理对其方式方式
         CGSize suggestSize = getSuggestSize(frameSetter, rangeToDraw, limitWidth, self.numberOfLines);
         [self handleAlignmentWithFrame:&frameR suggestSize:suggestSize limitWidth:limitWidth];
-    }
-    else {
+    } else {
         CTFrameRef frame4Cal = CTFramesetterCreateFrame(frameSetter, rangeToDraw, [UIBezierPath bezierPathWithRect:frameR].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
         frameR = getDrawFrame(frame4Cal, self.bounds.size.height,NO);
         frameR = convertRect(frameR, self.bounds.size.height);
-        frameR = CGRectMake(frameR.origin.x, frameR.origin.y,MIN(frameR.size.width, limitWidth), MIN(frameR.size.height, limitHeight));
+        frameR = CGRectMake(frameR.origin.x, frameR.origin.y, limitWidth, MIN(frameR.size.height, limitHeight));
         CFSAFERELEASE(frame4Cal)
     }
     
