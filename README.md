@@ -3,7 +3,7 @@
 </p>
 
 <p align="center" >
-  <img src="http://upload-images.jianshu.io/upload_images/1835430-bc004dc959f7b675.gif?imageMogr2/auto-orient/strip" alt="DWCoreTextLabel" title="DWCoreTextLabel">
+  <img src="https://github.com/CodeWicky/DWCoreTextLabel/raw/master/%E5%8A%A8%E7%94%BB%E5%B1%95%E7%A4%BA.gif" alt="DWCoreTextLabel" title="DWCoreTextLabel">
 </p>
 
 ## Description
