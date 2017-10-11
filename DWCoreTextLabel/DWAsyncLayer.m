@@ -98,7 +98,7 @@ static dispatch_queue_t DWCoreTextLabelLayerGetReleaseQueue() {
     }
     if (async) {
         int32_t signal = self.signal;
-        BOOL (^isCancelled)() = ^BOOL() {
+        BOOL (^isCancelled)() = ^BOOL(void) {
             return signal != self.signal;
         };
         CGSize size = self.bounds.size;

@@ -622,7 +622,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 #pragma mark ---绘制相关---
 
 ///绘制富文本
--(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)())isCanceled {
+-(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)(void))isCanceled {
     dispatch_barrier_sync(self.syncQueue, ^{
         CGContextSaveGState(context);
         CGContextSetTextMatrix(context, CGAffineTransformIdentity);
@@ -1166,7 +1166,7 @@ static CGFloat widthCallBacks(void * ref) {
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;
         __weak typeof(self)weakSelf = self;
-        layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
+        layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)(void)){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
         };
         UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
