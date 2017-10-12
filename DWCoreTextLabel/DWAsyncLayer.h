@@ -20,7 +20,7 @@
 
 @interface DWAsyncLayer : CALayer
 
-@property (nonatomic ,copy) void (^displayBlock)(CGContextRef context,BOOL(^isCanceled)());
+@property (nonatomic ,copy) void (^displayBlock)(CGContextRef context,BOOL(^isCanceled)(void));
 
 @property (nonatomic ,assign) BOOL displaysAsynchronously;
 

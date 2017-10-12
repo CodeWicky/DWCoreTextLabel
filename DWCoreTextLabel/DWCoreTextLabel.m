@@ -622,7 +622,7 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
 #pragma mark ---绘制相关---
 
 ///绘制富文本
--(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)())isCanceled {
+-(void)drawTheTextWithContext:(CGContextRef)context isCanceled:(BOOL(^)(void))isCanceled {
     dispatch_barrier_sync(self.syncQueue, ^{
         CGContextSaveGState(context);
         CGContextSetTextMatrix(context, CGAffineTransformIdentity);
@@ -766,12 +766,11 @@ static inline void hanldeReplicateRange(NSRange targetR,NSRange exceptR,NSMutabl
         ///若无排除区域处理对其方式方式
         CGSize suggestSize = getSuggestSize(frameSetter, rangeToDraw, limitWidth, self.numberOfLines);
         [self handleAlignmentWithFrame:&frameR suggestSize:suggestSize limitWidth:limitWidth];
-    }
-    else {
+    } else {
         CTFrameRef frame4Cal = CTFramesetterCreateFrame(frameSetter, rangeToDraw, [UIBezierPath bezierPathWithRect:frameR].CGPath, (__bridge_retained CFDictionaryRef)exclusionConfig);
         frameR = getDrawFrame(frame4Cal, self.bounds.size.height,NO);
         frameR = convertRect(frameR, self.bounds.size.height);
-        frameR = CGRectMake(frameR.origin.x, frameR.origin.y,MIN(frameR.size.width, limitWidth), MIN(frameR.size.height, limitHeight));
+        frameR = CGRectMake(frameR.origin.x, frameR.origin.y, limitWidth, MIN(frameR.size.height, limitHeight));
         CFSAFERELEASE(frame4Cal)
     }
     
@@ -1167,7 +1166,7 @@ static CGFloat widthCallBacks(void * ref) {
         DWAsyncLayer * layer = (DWAsyncLayer *)self.layer;
         layer.contentsScale = [UIScreen mainScreen].scale;
         __weak typeof(self)weakSelf = self;
-        layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)()){
+        layer.displayBlock = ^(CGContextRef context,BOOL(^isCanceled)(void)){
             [weakSelf drawTheTextWithContext:context isCanceled:isCanceled];
         };
         UITapGestureRecognizer * doubleClick = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(doubleClickAction:)];
