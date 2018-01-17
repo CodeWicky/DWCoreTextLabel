@@ -148,6 +148,10 @@ block();\
     if (error) {///移除任务
         [self removeOperationByUrl:sender.userInfo[@"url"]];
         [self removeCacheByUrl:sender.userInfo[@"url"]];
+    } else {
+        NSString * url = sender.userInfo[@"url"];
+        DWWebImageOperation * operation = self.operations[url];///取出下载任务
+        operation.finished = YES;
     }
 }
 
@@ -242,13 +246,20 @@ static DWWebImageManager * mgr = nil;
 @implementation DWWebImageDownloader
 
 #pragma mark --- 接口方法 ---
--(instancetype)initWithUrl:(NSString *)url session:(NSURLSession *)session
-{
+-(instancetype)initWithSession:(NSURLSession *)session {
     self = [super init];
     if (self) {
-        _url = url;
         _session = session;
         _downloadFinish = NO;
+    }
+    return self;
+}
+
+-(instancetype)initWithUrl:(NSString *)url session:(NSURLSession *)session
+{
+    self = [self initWithSession:session];
+    if (self) {
+        _url = url;
     }
     return self;
 }
@@ -262,6 +273,14 @@ static DWWebImageManager * mgr = nil;
         return;
     }
     [self downloadImageWithRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:url]]];
+}
+
+-(void)resume {
+    [self.task resume];
+}
+
+-(void)cancel {
+    [self.task cancel];
 }
 
 #pragma mark --- Tool Method ---
@@ -326,7 +345,7 @@ static DWWebImageManager * mgr = nil;
 
 #pragma mark --- DWWebImageOperation ---
 @implementation DWWebImageOperation
-
+@synthesize finished = _finished;
 -(instancetype)initWithUrl:(NSString *)url session:(NSURLSession *)session
 {
     self = [super init];
@@ -340,13 +359,19 @@ static DWWebImageManager * mgr = nil;
 -(void)start
 {
     [super start];
-    [self.donwloader.task resume];
+    [self.donwloader resume];
 }
 
 -(void)cancel
 {
     [super cancel];
-    [self.donwloader.task cancel];
+    [self.donwloader cancel];
+}
+
+-(void)setFinished:(BOOL)finished {
+    [self willChangeValueForKey:@"isFinished"];
+    _finished = finished;
+    [self didChangeValueForKey:@"isFinished"];
 }
 
 @end

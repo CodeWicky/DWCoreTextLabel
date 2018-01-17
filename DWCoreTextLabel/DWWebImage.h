@@ -11,8 +11,15 @@
  轻量级图片异步下载缓存类
  
  version 1.0.0
- 提供异步下载功能，提供图片缓存功能，线程安全。
+ 提供异步下载功能，提供图片缓存功能。
+ 
+ version 1.0.1
+ 添加断言
+ 
+ version 1.0.2
+ 下载完成后修改operation为finish状态
  */
+
 
 #import <UIKit/UIKit.h>
 
@@ -124,8 +131,18 @@ typedef NS_ENUM(NSUInteger, DWWebImageCacheType) {///缓存数据类型
 ///现在完成标志
 @property (nonatomic ,assign) BOOL downloadFinish;
 
+///初始化方法
+-(instancetype)initWithSession:(NSURLSession *)session;
+
 ///以url下载图片
 -(void)downloadImageWithUrlString:(NSString *)url;
+
+///开启下载
+-(void)resume;
+
+///取消下载
+-(void)cancel;
+
 @end
 
 
@@ -135,6 +152,9 @@ typedef NS_ENUM(NSUInteger, DWWebImageCacheType) {///缓存数据类型
 
 ///图片下载器
 @property (nonatomic ,strong) DWWebImageDownloader * donwloader;
+
+///下载任务是否完成
+@property (nonatomic , assign, getter=isFinished) BOOL finished;
 
 ///以url及session下载图片
 -(instancetype)initWithUrl:(NSString *)url session:(NSURLSession *)session;
