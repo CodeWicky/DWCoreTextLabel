@@ -155,6 +155,12 @@
  
  少数情况末尾省略号失效，尚未找到原因
  
+ version 1.2.3
+ 规范Block写法
+ 
+ version 1.2.4
+ 修改图片下载类
+ 
  */
 
 #import <UIKit/UIKit.h>
